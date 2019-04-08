@@ -13,8 +13,12 @@ public class ServerMain implements FileSystemObserver {
 	private static Logger log = Logger.getLogger(ServerMain.class.getName());
 	protected FileSystemManager fileSystemManager;
 	
-	public ServerMain() throws NumberFormatException, IOException, NoSuchAlgorithmException {
+	public ServerMain(int portNum) throws NumberFormatException, IOException, NoSuchAlgorithmException {
 		fileSystemManager=new FileSystemManager(Configuration.getConfigurationValue("path"),this);
+		
+		PeerClient testC = new PeerClient("localhost", 8110);
+		PeerServer testS = new PeerServer(portNum);
+		
 	}
 
 	@Override

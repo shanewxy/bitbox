@@ -15,8 +15,16 @@ public class Peer
                 "[%1$tc] %2$s %4$s: %5$s%n");
         log.info("BitBox Peer starting...");
         Configuration.getConfiguration();
+        int serverPortNum = 0;
         
-        new ServerMain();
+        // Add a try-catch to allow user customized port number via command line
+        try {
+        	serverPortNum = Integer.parseInt(args[0]);
+        }catch (Exception e) {
+        	serverPortNum = Integer.parseInt(Configuration.getConfigurationValue("port"));
+        }
+
+        new ServerMain(serverPortNum);
         
     }
 }
