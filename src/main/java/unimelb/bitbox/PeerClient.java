@@ -21,16 +21,15 @@ public class PeerClient {
 			DataOutputStream output = new DataOutputStream(s.getOutputStream());
 			
 			//Greeting
-			output.writeUTF("Hello there server " + port + ":)~" + "//"+System.currentTimeMillis());
+			output.writeUTF("Hello there server " + port + ":)~");
 			output.flush();
 			System.out.println("Recieved: " + input.readUTF() + "//"+System.currentTimeMillis());
 			
 		} catch (UnknownHostException e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			System.out.println("Connection failed with server => " + ip +":"+port);
 		}
 	}
 }

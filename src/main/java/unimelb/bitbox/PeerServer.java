@@ -17,7 +17,7 @@ public class PeerServer {
 			String test = input.readUTF();
 			System.out.println("Server recieved: "+test + "//"+System.currentTimeMillis());
 			
-			output.writeUTF("Hello from server" + "//"+System.currentTimeMillis());
+			output.writeUTF("Hello from server");
 			output.flush();
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
