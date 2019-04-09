@@ -3,6 +3,7 @@ package unimelb.bitbox.util;
 import java.util.ArrayList;
 
 import unimelb.bitbox.util.Document;
+import unimelb.bitbox.util.HostPort;
 /**
  * This class contains templates of all essential protocols that used in the entire peers network.
  * Each type of protocol is an object of the provided Document class, which has already been set up 
@@ -12,24 +13,20 @@ import unimelb.bitbox.util.Document;
  */
 public class Protocol {
 	
-	public static Document createInvalidP() {
+	public static Document createInvalidP(String wrongMsg) {
 		Document doc = new Document();
 		
 		doc.append("command", "INVALID_PROTOCOL");
-		doc.append("message", "message must contain a command filed as string");
+		doc.append("message", wrongMsg);
 		return doc;
 	}
 
-	public static Document createConnectionRefusedP(ArrayList<String> peerList) {
+	public static Document createConnectionRefusedP(ArrayList<HostPort> peerList) {
 		Document doc = new Document();
 		ArrayList<Document> peers = new ArrayList<Document>();
 		
-		for(String str : peerList) {
-			Document peer = new Document();
-			String[] peerInfo = str.split(":");
-			peer.append("host", peerInfo[0]);
-			peer.append("port", Integer.parseInt(peerInfo[1]));
-			peers.add(peer);
+		for(HostPort hp : peerList) {
+			peers.add(hp.toDoc());
 		}
 		
 		doc.append("command", "CONNECTION_REFUSED");
@@ -38,25 +35,19 @@ public class Protocol {
 		return doc;
 	}
 	
-	public static Document createHandshakeRequestP(String host, int port) {
+	public static Document createHandshakeRequestP(HostPort hp) {
 		Document doc = new Document();
-		Document peer = new Document();
 		
-		peer.append("host", host);
-		peer.append("port", port);
 		doc.append("command", "HANDSHAKE_REQUEST");
-		doc.append("hostPort", peer);
+		doc.append("hostPort", hp.toDoc());
 		return doc;
 	}
 	
-	public static Document createHandshakeResponseP(String host, int port) {
+	public static Document createHandshakeResponseP(HostPort hp) {
 		Document doc = new Document();
-		Document peer = new Document();
 		
-		peer.append("host", host);
-		peer.append("port", port);
 		doc.append("command", "HANDSHAKE_RESPONSE");
-		doc.append("hostPort", peer);
+		doc.append("hostPort", hp.toDoc());
 		return doc;
 	}
 }
