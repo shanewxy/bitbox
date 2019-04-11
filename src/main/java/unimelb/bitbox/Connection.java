@@ -2,56 +2,43 @@ package unimelb.bitbox;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
-import java.io.EOFException;
 import java.io.IOException;
 import java.net.Socket;
-import java.net.UnknownHostException;
-/**
-* @author: Xueying Wang
-*/
 
 import unimelb.bitbox.util.Document;
 import unimelb.bitbox.util.FileSystemManager;
 
-public class Client implements Runnable {
+/**
+ * @author: Xueying Wang
+ */
+public class Connection extends Thread {
     DataInputStream in;
     DataOutputStream out;
-    public boolean connected = false;
+    protected Socket socket;
     private FileSystemManager fileSystemManager;
 
-    public Client(String peer, FileSystemManager fileSystemManager) {
+    public Connection(Socket socket, FileSystemManager fileSystemManager) {
+        this.socket = socket;
+        this.in = null;
+        this.out = null;
         this.fileSystemManager = fileSystemManager;
-        Socket s = null;
-        String address = peer.split(":")[0];
-        int port = Integer.parseInt(peer.split(":")[1]);
-        try {
-            s = new Socket(address, port);
-            in = new DataInputStream(s.getInputStream());
-            out = new DataOutputStream(s.getOutputStream());
-            System.out.println("connected to server " + address);
-            connected = true;
-            new Thread(this).start();
-        } catch (UnknownHostException e) {
-            System.out.println("Sock:" + e.getMessage());
-        } catch (EOFException e) {
-            System.out.println("EOF:" + e.getMessage());
-        } catch (IOException e) {
-            System.out.println("IO:" + e.getMessage());
-        }
     }
 
-    /**
-     * send message to server.
-     */
-    public void sendToServer(String msg) {
+    public void run() {
         try {
-            out.writeUTF(msg);
+            in = new DataInputStream(socket.getInputStream());
+            out = new DataOutputStream(socket.getOutputStream());
+            while (true) {
+                String msg = in.readUTF();
+                handleMsg(msg);
+            }
         } catch (IOException e) {
-            e.printStackTrace();
+            return;
         }
+
     }
 
-    public boolean incomingMsg(String msg) {
+    public boolean handleMsg(String msg) {
         System.out.println(msg);
         Document json = Document.parse(msg);
         String cmd = null;
@@ -87,18 +74,4 @@ public class Client implements Runnable {
         return result;
     }
 
-    @Override
-    public void run() {
-        while (true) {
-            String data = null;
-            try {
-                data = in.readUTF();
-                if (data != null) {
-                    incomingMsg(data);
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-    }
 }
