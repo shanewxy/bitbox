@@ -20,51 +20,27 @@ public class ServerMain implements FileSystemObserver {
     protected FileSystemManager fileSystemManager;
     private Client client;
     private Server server;
+    private MessageHandler handler;
 
     public ServerMain() throws NumberFormatException, IOException,
             NoSuchAlgorithmException {
         fileSystemManager = new FileSystemManager(
                 Configuration.getConfigurationValue("path"), this);
-        server = new Server(PORT, this.fileSystemManager);
-        client = new Client(PEERS[0],fileSystemManager);
+        handler = new MessageHandler(fileSystemManager);
+        server = new Server(PORT, handler);
+        client = new Client(PEERS[0], handler);
     }
 
     @Override
     public void processFileSystemEvent(FileSystemEvent fileSystemEvent) {
-        Document message = new Document();
-        message.append("command", fileSystemEvent.event.toString());
-        if(fileSystemEvent.fileDescriptor!=null)
-        message.append("fileDescriptor",
-                fileSystemEvent.fileDescriptor.toDoc());
-        message.append("pathName", fileSystemEvent.pathName);
+        String msg = handler.toJson(fileSystemEvent);
         try {
-            if (client!=null&&client.connected)
-                client.sendToServer(message.toJson());
-            server.sendToClients(message.toJson());
+            if (client != null && client.connected)
+                client.sendToServer(msg);
+            server.sendToClients(msg);
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-//    public void handleMsg() {
-//        System.out.println("fsdd");
-//        while (true) {
-//            if (client.connected)
-//            messages.add(client.incomingMsg());
-//            messages.addAll(server.incomingMsg());
-//            for (String message : messages) {
-//                if(message!=null)
-//                System.out.println(message);
-//            }
-//            messages.clear();
-//            try {
-//                Thread.sleep(1000);
-//            } catch (InterruptedException e) {
-//                e.printStackTrace();
-//            }
-//        }
-//        switch (msg) {
-//
-//        }
-//    }
 }

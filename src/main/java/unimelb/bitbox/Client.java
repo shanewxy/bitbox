@@ -1,36 +1,48 @@
 package unimelb.bitbox;
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.EOFException;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 import java.net.Socket;
 import java.net.UnknownHostException;
-/**
-* @author: Xueying Wang
-*/
 
 import unimelb.bitbox.util.Document;
 import unimelb.bitbox.util.FileSystemManager;
 
 public class Client implements Runnable {
-    DataInputStream in;
-    DataOutputStream out;
+    BufferedReader in;
+    BufferedWriter out;
     public boolean connected = false;
-    private FileSystemManager fileSystemManager;
+    private MessageHandler handler;
 
-    public Client(String peer, FileSystemManager fileSystemManager) {
-        this.fileSystemManager = fileSystemManager;
+    public Client(String peer, MessageHandler handler) {
+        this.handler = handler;
         Socket s = null;
         String address = peer.split(":")[0];
         int port = Integer.parseInt(peer.split(":")[1]);
         try {
             s = new Socket(address, port);
-            in = new DataInputStream(s.getInputStream());
-            out = new DataOutputStream(s.getOutputStream());
+            in = new BufferedReader(new InputStreamReader(s.getInputStream()));
+
+            out = new BufferedWriter(
+                    new OutputStreamWriter(s.getOutputStream()));
             System.out.println("connected to server " + address);
             connected = true;
+//            test connection
             new Thread(this).start();
+            Document doc = new Document();
+            doc.append("command", "HANDSHAKE_REQUEST");
+            Document h = new Document();
+            h.append("host", "10.13.61.255");
+            h.append("port", 811);
+            doc.append("hostPort", h);
+            System.out.println(doc.toJson());
+            sendToServer(doc.toJson() + "\n");//
         } catch (UnknownHostException e) {
             System.out.println("Sock:" + e.getMessage());
         } catch (EOFException e) {
@@ -45,46 +57,11 @@ public class Client implements Runnable {
      */
     public void sendToServer(String msg) {
         try {
-            out.writeUTF(msg);
+            out.write(msg);
+            out.flush();
         } catch (IOException e) {
             e.printStackTrace();
         }
-    }
-
-    public boolean incomingMsg(String msg) {
-        System.out.println(msg);
-        Document json = Document.parse(msg);
-        String cmd = null;
-        String pathName = null;
-        Long lastModified = null;
-        String md5 = null;
-        if (json.containsKey("command")) {
-            cmd = json.getString("command");
-        }
-        if (json.containsKey("pathName")) {
-            pathName = json.getString("pathName");
-        }
-        if (json.containsKey("fileDescriptor")) {
-            Document fileDescriptor = (Document) json.get("fileDescriptor");
-            if (fileDescriptor.containsKey("lastModified")) {
-                lastModified = fileDescriptor.getLong("lastModified");
-            }
-            if (json.containsKey("md5")) {
-                md5 = fileDescriptor.getString("md5");
-            }
-            if (json.containsKey("filezSize")) {
-                Long fileSize = fileDescriptor.getLong("fileSize");
-            }
-        }
-        boolean result = false;
-        switch (cmd) {
-        case "FILE_DELETE":
-            if (fileSystemManager.fileNameExists(pathName))
-                result = fileSystemManager.deleteFile(pathName, lastModified,
-                        md5);
-            break;
-        }
-        return result;
     }
 
     @Override
@@ -92,13 +69,17 @@ public class Client implements Runnable {
         while (true) {
             String data = null;
             try {
-                data = in.readUTF();
+                Thread.sleep(1000);
+                data = in.readLine();
                 if (data != null) {
-                    incomingMsg(data);
+                    handler.handleMsg(data);
                 }
             } catch (IOException e) {
+                e.printStackTrace();
+            } catch (InterruptedException e) {
                 e.printStackTrace();
             }
         }
     }
+
 }

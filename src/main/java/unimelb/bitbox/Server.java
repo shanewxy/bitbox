@@ -15,14 +15,10 @@ public class Server {
     private static Logger log = Logger
             .getLogger(FileSystemManager.class.getName());
     private ServerSocket sock;
-    
-    public List<Connection> connections = new ArrayList<Connection>();
-//
-//    public List<Connection> getConnections() {
-//        return connections;
-//    }
 
-    public Server(int port,FileSystemManager fileSystemManager) {
+    public List<Connection> connections = new ArrayList<Connection>();
+
+    public Server(int port, MessageHandler handler) {
         try {
             sock = new ServerSocket(port);
         } catch (IOException e1) {
@@ -32,7 +28,8 @@ public class Server {
             try {
                 while (true) {
                     Socket socket = sock.accept();
-                    Connection conn = new Connection(socket,fileSystemManager);
+                    Connection conn = new Connection(socket,
+                            handler);
                     conn.start();
                     connections.add(conn);
                 }
@@ -46,27 +43,11 @@ public class Server {
     public void sendToClients(String msg) {
         for (Connection connection : connections) {
             try {
-                connection.out.writeUTF(msg);
+                connection.out.write(msg);
             } catch (IOException e) {
                 e.printStackTrace();
             }
         }
     }
-//
-//    public List<String> incomingMsg() {
-//        List<String> msg = new ArrayList<String>();
-////        System.out.println(msg);
-//        for (Connection connection : connections) {
-//            String message=null;
-//            try {
-//                message = connection.in.readUTF();
-//            } catch (IOException e) {
-//                e.printStackTrace();
-//            }
-//            if(msg!=null)
-//            msg.add(message);
-//        }
-//        return msg;
-//    }
 
 }
