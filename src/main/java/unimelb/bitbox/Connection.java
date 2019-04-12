@@ -27,11 +27,9 @@ public class Connection extends Thread {
 
     public void run() {
         try {
-            in = new BufferedReader(
-                    new InputStreamReader(socket.getInputStream()));
+            in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 
-            out = new BufferedWriter(
-                    new OutputStreamWriter(socket.getOutputStream()));
+            out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
             while (true) {
                 String msg = in.readLine();
                 handler.handleMsg(msg);

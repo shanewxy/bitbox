@@ -29,8 +29,7 @@ public class Client implements Runnable {
             s = new Socket(address, port);
             in = new BufferedReader(new InputStreamReader(s.getInputStream()));
 
-            out = new BufferedWriter(
-                    new OutputStreamWriter(s.getOutputStream()));
+            out = new BufferedWriter(new OutputStreamWriter(s.getOutputStream()));
             System.out.println("connected to server " + address);
             connected = true;
 //            test connection

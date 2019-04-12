@@ -45,8 +45,7 @@ public class MessageHandler {
         switch (cmd) {
         case "FILE_DELETE_REQUEST":
             if (fileSystemManager.fileNameExists(pathName))
-                result = fileSystemManager.deleteFile(pathName, lastModified,
-                        md5);
+                result = fileSystemManager.deleteFile(pathName, lastModified, md5);
             break;
         case "DIRECTORY_CREATE_REQUEST":
             result = fileSystemManager.makeDirectory(pathName);
@@ -63,8 +62,7 @@ public class MessageHandler {
         Document message = new Document();
         message.append("command", fileSystemEvent.event + "_REQUEST");
         if (fileSystemEvent.fileDescriptor != null)
-            message.append("fileDescriptor",
-                    fileSystemEvent.fileDescriptor.toDoc());
+            message.append("fileDescriptor", fileSystemEvent.fileDescriptor.toDoc());
         message.append("pathName", fileSystemEvent.pathName);
         return message.toJson();
     }

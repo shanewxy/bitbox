@@ -12,20 +12,16 @@ import unimelb.bitbox.util.FileSystemManager.FileSystemEvent;
 
 public class ServerMain implements FileSystemObserver {
     private static Logger log = Logger.getLogger(ServerMain.class.getName());
-    private static final int PORT = Integer
-            .parseInt(Configuration.getConfigurationValue("port"));
-    private static final String[] PEERS = Configuration
-            .getConfigurationValue("peers").split(",");
+    private static final int PORT = Integer.parseInt(Configuration.getConfigurationValue("port"));
+    private static final String[] PEERS = Configuration.getConfigurationValue("peers").split(",");
 
     protected FileSystemManager fileSystemManager;
     private Client client;
     private Server server;
     private MessageHandler handler;
 
-    public ServerMain() throws NumberFormatException, IOException,
-            NoSuchAlgorithmException {
-        fileSystemManager = new FileSystemManager(
-                Configuration.getConfigurationValue("path"), this);
+    public ServerMain() throws NumberFormatException, IOException, NoSuchAlgorithmException {
+        fileSystemManager = new FileSystemManager(Configuration.getConfigurationValue("path"), this);
         handler = new MessageHandler(fileSystemManager);
         server = new Server(PORT, handler);
         client = new Client(PEERS[0], handler);

@@ -12,8 +12,7 @@ import unimelb.bitbox.util.FileSystemManager;
 public class Server {
 
     public volatile static long clientCount = 0;
-    private static Logger log = Logger
-            .getLogger(FileSystemManager.class.getName());
+    private static Logger log = Logger.getLogger(FileSystemManager.class.getName());
     private ServerSocket sock;
 
     public List<Connection> connections = new ArrayList<Connection>();
@@ -28,8 +27,7 @@ public class Server {
             try {
                 while (true) {
                     Socket socket = sock.accept();
-                    Connection conn = new Connection(socket,
-                            handler);
+                    Connection conn = new Connection(socket, handler);
                     conn.start();
                     connections.add(conn);
                 }
