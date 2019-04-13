@@ -56,7 +56,7 @@ public class Client implements Runnable {
      */
     public void sendToServer(String msg) {
         try {
-            out.write(msg);
+            out.write(msg+"\n");
             out.flush();
         } catch (IOException e) {
             e.printStackTrace();

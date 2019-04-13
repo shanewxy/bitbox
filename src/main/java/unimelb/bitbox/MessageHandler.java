@@ -64,7 +64,7 @@ public class MessageHandler {
         if (fileSystemEvent.fileDescriptor != null)
             message.append("fileDescriptor", fileSystemEvent.fileDescriptor.toDoc());
         message.append("pathName", fileSystemEvent.pathName);
-        return message.toJson()+"\n";
+        return message.toJson();
     }
     /**
      * marshall the result and event into Json
