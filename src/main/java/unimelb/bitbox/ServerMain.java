@@ -5,40 +5,38 @@ import java.security.NoSuchAlgorithmException;
 import java.util.logging.Logger;
 
 import unimelb.bitbox.util.Configuration;
+import unimelb.bitbox.util.Document;
 import unimelb.bitbox.util.FileSystemManager;
-import unimelb.bitbox.util.FileSystemManager.FileSystemEvent;
 import unimelb.bitbox.util.FileSystemObserver;
+import unimelb.bitbox.util.FileSystemManager.FileSystemEvent;
 
 public class ServerMain implements FileSystemObserver {
+    private static Logger log = Logger.getLogger(ServerMain.class.getName());
+    private static final int PORT = Integer.parseInt(Configuration.getConfigurationValue("port"));
+    private static final String[] PEERS = Configuration.getConfigurationValue("peers").split(",");
 
-	private Client client;
-	private Server server;
-	private static int port;
-	private static String[] peers;
+    protected FileSystemManager fileSystemManager;
+    private Client client;
+    private Server server;
+    private MessageHandler handler;
 
-	private static Logger log = Logger.getLogger(ServerMain.class.getName());
-	protected FileSystemManager fileSystemManager;
+    public ServerMain() throws NumberFormatException, IOException, NoSuchAlgorithmException {
+        fileSystemManager = new FileSystemManager(Configuration.getConfigurationValue("path"), this);
+        handler = new MessageHandler(fileSystemManager);
+        server = new Server(PORT, handler);
+        client = new Client(PEERS[0], handler);
+    }
 
-	public ServerMain() throws NumberFormatException, IOException, NoSuchAlgorithmException {
-		fileSystemManager = new FileSystemManager(Configuration.getConfigurationValue("path"), this);
-		port = Integer.parseInt(Configuration.getConfigurationValue("port"));
-		peers = Configuration.getConfigurationValue("peers").split(",");
-
-		client = new Client();
-		client.connectToPeerServer(peers[0]);
-		server = new Server(port);
-
-//		if (client != null) {
-//
-//			client.sendToServer("hi");
-//		}
-		server.sendToClients("hello");
-
-	}
-
-	@Override
-	public void processFileSystemEvent(FileSystemEvent fileSystemEvent) {
-
-	}
+    @Override
+    public void processFileSystemEvent(FileSystemEvent fileSystemEvent) {
+        String msg = handler.toJson(fileSystemEvent);
+        try {
+            if (client != null && client.connected)
+                client.sendToServer(msg);
+            server.sendToClients(msg);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
 
 }

@@ -1,6 +1,5 @@
 package unimelb.bitbox;
 
-import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -8,48 +7,46 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
 
+import unimelb.bitbox.util.FileSystemManager;
+
 public class Server {
-	private ServerSocket serverSocket;
-	private List<Connection> connections = new ArrayList<Connection>();
-	private static int counter = 0;
-	private static Logger log = Logger.getLogger(Server.class.getName());
 
-	public Server(int port) {
-		System.out.println("server listening for a connection");
-		try {
-			serverSocket = new ServerSocket(port);
+    public volatile static long clientCount = 0;
+    private static Logger log = Logger.getLogger(FileSystemManager.class.getName());
+    private ServerSocket sock;
 
-		} catch (IOException e) {
-			System.out.println(e.getMessage());
-		}
+    public List<Connection> connections = new ArrayList<Connection>();
 
-		Runnable listener = () -> {
-			try {
-				while (true) {
-					Socket socket = serverSocket.accept();
-					Connection conn = new Connection(socket);
-					conn.start();
-					connections.add(conn);
-				}
-			} catch (IOException e) {
-				System.err.println(e);
-			}
-		};
-		new Thread(listener).start();
+    public Server(int port, MessageHandler handler) {
+        try {
+            sock = new ServerSocket(port);
+        } catch (IOException e1) {
+            e1.printStackTrace();
+        }
+        Runnable listener = () -> {
+            try {
+                while (true) {
+                    Socket socket = sock.accept();
+                    Connection conn = new Connection(socket, handler);
+                    conn.start();
+                    connections.add(conn);
+                }
+            } catch (IOException e) {
+                System.err.println(e);
+            }
+        };
+        new Thread(listener).start();
+    }
 
-	}
-
-	public void sendToClients(String string) {
-		for (Connection c : connections) {
-			if (c != null) {
-				try {
-					c.out.writeUTF(string);
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
-			}
-		}
-
-	}
+    public void sendToClients(String msg) {
+        for (Connection connection : connections) {
+            try {
+                connection.out.write(msg+"\n");
+                connection.out.flush();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
 
 }
