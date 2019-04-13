@@ -79,6 +79,7 @@ public class ServerMain implements FileSystemObserver {
 	public void processFileSystemEvent(FileSystemEvent fileSystemEvent) {
 //		System.out.println(fileSystemEvent.toString() + fileSystemEvent.fileDescriptor.lastModified);
 		// TODO: process events
+		localServer.sendMsg(fileSystemEvent.event.name());
 	}
 	
 }

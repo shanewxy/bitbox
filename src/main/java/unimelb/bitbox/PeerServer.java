@@ -93,6 +93,21 @@ public class PeerServer {
 		}
 	}
 	
+	public void sendMsg(String str) {
+		for(Socket sc : clients.keySet()) {
+			try {
+				BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(sc.getOutputStream()));
+				bw.write(str);
+				bw.flush();
+				bw.close();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			
+		}
+	}
+	
 	public PeerServer(int portNum, FileSystemManager fsm) {
 		
 		try {
