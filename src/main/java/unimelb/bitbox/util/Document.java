@@ -145,4 +145,11 @@ public class Document {
 	public boolean getBoolean(String key){
 		return (boolean) obj.get(key);
 	}
+	
+	@SuppressWarnings("unchecked")
+	public void replace(String key,String value){
+		if (obj.containsKey(key)) {
+			obj.replace(key, value);
+		}
+	}
 }

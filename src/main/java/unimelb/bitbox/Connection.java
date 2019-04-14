@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.Socket;
+import java.util.ArrayList;
 
 import unimelb.bitbox.util.Document;
 import unimelb.bitbox.util.FileSystemManager;
@@ -32,7 +33,16 @@ public class Connection extends Thread {
             out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
             while (true) {
                 String msg = in.readLine();
-                handler.handleMsg(msg);
+                if (msg!=null) {
+                	ArrayList<Document> responses = handler.handleMsg(msg);
+                	if (responses!=null) {
+                		for (Document r : responses) {
+                			System.out.println("run here");
+                			out.write(r.toJson());
+                			out.flush();
+                		}
+					}
+				}
             }
         } catch (IOException e) {
             return;
