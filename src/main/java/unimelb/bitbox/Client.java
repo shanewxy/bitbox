@@ -41,7 +41,7 @@ public class Client implements Runnable {
             h.append("port", 811);
             doc.append("hostPort", h);
             System.out.println(doc.toJson());
-            sendToServer(doc.toJson() + "\n");//
+            sendToServer(doc.toJson());//
         } catch (UnknownHostException e) {
             System.out.println("Sock:" + e.getMessage());
         } catch (EOFException e) {
