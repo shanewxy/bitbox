@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.Base64;
+import java.util.logging.Logger;
 
 import unimelb.bitbox.util.Configuration;
 import unimelb.bitbox.util.Document;
@@ -13,21 +15,22 @@ import unimelb.bitbox.util.FileSystemManager.FileSystemEvent;
 public class MessageHandler {
 
 	private static final Long BLOCKSIZE = Long.parseLong(Configuration.getConfigurationValue("blockSize"));
+	private static Logger log = Logger.getLogger(MessageHandler.class.getName());
 
-	static String cmd = null;
-	static String pathName = null;
-	static Long lastModified = null;
-	static String md5 = null;
-	static Long fileSize = null;
+	String cmd = null;
+	String pathName = null;
+	long lastModified;
+	String md5 = null;
+	long fileSize;
 	FileSystemManager fileSystemManager;
-	static String host = null;
-	static Long port;
-	static boolean status;
-	static String message;
-	static String content;
-	static Long length;
-	static Long position;
-
+	String host = null;
+	long port;
+	boolean status;
+	String message;
+	String content;
+	long length;
+	long position;
+	
 	public MessageHandler(FileSystemManager fileSystemManager) {
 		this.fileSystemManager = fileSystemManager;
 
@@ -37,7 +40,7 @@ public class MessageHandler {
 	 * handle incoming message
 	 */
 	public ArrayList<Document> handleMsg(String msg) {
-		System.out.println(msg);
+		 System.out.println(msg);
 		parseJsonMsg(msg);
 
 		boolean result = false;
@@ -53,63 +56,82 @@ public class MessageHandler {
 			result = fileSystemManager.deleteDirectory(pathName);
 			break;
 		case "FILE_CREATE_REQUEST":
-			//
+			Document json = Document.parse(msg);
+			
+			ArrayList<Document> responses = new ArrayList<Document>(); // for return use
+
 			if (!fileSystemManager.isSafePathName(pathName)) {
-				Document json = Document.parse(msg);
-				json.replace("command", "FILE_CREATE_RESPONSE");
-				json.append("message", "unsafe pathname given");
-				json.append("status", false);
-				result = false;
-				// System.out.println(json.toJson());
-			}
-			if (fileSystemManager.fileNameExists(pathName)) {
-				Document json = Document.parse(msg);
-				json.replace("command", "FILE_CREATE_RESPONSE");
-				json.append("message", "pathname already exists");
-				json.append("status", false);
-				result = false;
+				appendResponseInfo(json, "FILE_CREATE_RESPONSE", "unsafe pathname given", false);
+				responses.add(json);
+				return responses;
+			} else if (fileSystemManager.fileNameExists(pathName)) {
+				appendResponseInfo(json, "FILE_CREATE_RESPONSE", "pathname already exists", false);
+				responses.add(json);
+				return responses;
 			} else {
-				ArrayList<Document> responses = new ArrayList<>();
 				try {
-					// System.out.println(pathName+" "+md5+" "+
-					// length+lastModified);
-					if (fileSystemManager.createFileLoader(pathName, md5, BLOCKSIZE, lastModified)) {
-//						if (fileSystemManager.checkShortcut(pathName)) {
-//							// TODO use a local copy
-//						}
-//						else 
-						{
+					if (!fileSystemManager.createFileLoader(pathName, md5, fileSize, lastModified)) {
+						appendResponseInfo(json, "FILE_CREATE_RESPONSE", "file loader already in progress", false);
+						responses.add(json);
+						return responses;
+					} else if (fileSystemManager.checkShortcut(pathName)) {
+						// use a local copy
+						appendResponseInfo(json, "FILE_CREATE_RESPONSE", "use a local copy to create the file", true);
+						responses.add(json);
+						return responses;
+					} else {
+						Document json1 = Document.parse(msg);
+						appendResponseInfo(json1, "FILE_CREATE_RESPONSE", "file loader ready", true);
 
-							Document json1 = Document.parse(msg);
-							json1.replace("command", "FILE_CREATE_RESPONSE");
-							json1.append("message", "file loader ready");
-							json1.append("status", true);
-							System.out.println("need to send" + json1.toJson());
+						Document json2 = Document.parse(msg);
+						json2.replace("command", "FILE_BITES_REQUEST");
+						json2.append("position", 0);
+						json2.append("length", BLOCKSIZE);
 
-							Document json2 = Document.parse(msg);
-							json2.replace("command", "FILE_BITES_REQUEST");
-							json2.append("position", 0);
-							json2.append("length", BLOCKSIZE);
-							System.out.println("need to send" + json2.toJson());
-
-							responses.add(json1);
-							responses.add(json2);
-						}
+						responses.add(json1);
+						responses.add(json2);
+						
+						return responses;
 					}
 				} catch (NoSuchAlgorithmException e) {
 					e.printStackTrace();
 				} catch (IOException e) {
 					e.printStackTrace();
 				}
-				result = true;
-
 				return responses;
 			}
+		case "FILE_CREATE_RESPONSE":
+			log.info("message :" + message + " status : "+ status);
 			break;
 		case "FILE_BITES_REQUEST":
-			System.out.println("received file bites requests");
 			try {
-				ByteBuffer buffer = fileSystemManager.readFile(md5, position, length);
+				if (fileSize > BLOCKSIZE) {
+					System.out.println("this file needs to separately");
+				}
+				ByteBuffer buffer = fileSystemManager.readFile(md5, position,
+						(fileSize - position) > BLOCKSIZE ? BLOCKSIZE : (fileSize - position));
+				Document response = Document.parse(msg);
+				if (buffer != null) {
+
+					Base64.Encoder encoder = Base64.getEncoder(); // get encoder
+					buffer.flip();
+					byte[] bytes = new byte[buffer.limit()];
+					buffer.get(bytes);
+					content = encoder.encodeToString(bytes);
+
+					response.append("content", content);
+					appendResponseInfo(response, "FILE_BITES_RESPONSE", "successful read", true);
+					
+				} else {
+					appendResponseInfo(response, "FILE_BITES_RESPONSE",
+							"unsuccessful read, failed to read from source file", false);
+				}
+				return new ArrayList<Document>() {
+					{
+						add(response);
+					}
+				};
+
 			} catch (NoSuchAlgorithmException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -119,12 +141,49 @@ public class MessageHandler {
 			}
 			break;
 		case "FILE_BITES_RESPONSE":
-			//
-			// fileSystemManager.writeFile(pathName, src, position);
+			Base64.Decoder decoder = Base64.getDecoder(); // get decoder
+			byte[] bytes = decoder.decode(content);
+			ByteBuffer buffer = ByteBuffer.allocate(bytes.length);
+
+			buffer.put(bytes, 0, bytes.length);
+			buffer.flip();
+
+			try {
+				if (fileSystemManager.writeFile(pathName, buffer, position)) {
+					if (fileSystemManager.checkWriteComplete(pathName)) {
+						System.out.println("for test use : wirte done-------");
+						break;
+					} else {
+
+						Document biteRequest = Document.parse(msg);
+						biteRequest.replace("command", "FILE_BITES_REQUEST");
+						biteRequest.remove("content");
+						biteRequest.remove("message");
+						biteRequest.remove("status");
+						long p = biteRequest.getLong("position");
+						biteRequest.remove("position");
+						biteRequest.append("position", (p + buffer.capacity()));
+//						System.out.println("tttttest: " + biteRequest.toJson());
+
+						System.out.println("for test use : not complete yet");
+
+						return new ArrayList<Document>() {
+							{
+								add(biteRequest);
+							}
+						};
+					}
+				}
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (NoSuchAlgorithmException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 			break;
 		}
 		return null;
-
 	}
 
 	/**
@@ -144,7 +203,7 @@ public class MessageHandler {
 	 */
 
 	/**
-	 * retrive message from received Json and store info into variables
+	 * unmarshall message from received Json and store info into variables
 	 * 
 	 * @param msg
 	 */
@@ -165,31 +224,45 @@ public class MessageHandler {
 				md5 = fileDescriptor.getString("md5");
 			}
 			if (fileDescriptor.containsKey("fileSize")) {
-				this.fileSize = fileDescriptor.getLong("fileSize");
+				fileSize = fileDescriptor.getLong("fileSize");
 			}
 		}
 		if (json.containsKey("hostPort")) {
 			Document hostPort = (Document) json.get("hostPort");
 			if (hostPort.containsKey(host)) {
-				this.host = hostPort.getString("host");
+				host = hostPort.getString("host");
 			} else if (hostPort.containsKey("port")) {
-				this.port = hostPort.getLong("port");
+				port = hostPort.getLong("port");
 			}
 		}
 		if (json.containsKey("status")) {
-			this.status = json.getBoolean("status");
+			status = json.getBoolean("status");
 		}
 		if (json.containsKey("message")) {
-			this.message = json.getString("message");
+			message = json.getString("message");
 		}
 		if (json.containsKey("content")) {
-			this.content = json.getString("content");
+			content = json.getString("content");
 		}
 		if (json.containsKey("position")) {
-			this.position = json.getLong("position");
+			position = json.getLong("position");
 		}
 		if (json.containsKey("length")) {
-			this.length = json.getLong("length");
+			length = json.getLong("length");
 		}
+	}
+
+	/**
+	 * append general info when creating response protocol
+	 * 
+	 * @param json
+	 * @param cmd
+	 * @param message
+	 * @param status
+	 */
+	public void appendResponseInfo(Document json, String cmd, String message, boolean status) {
+		json.replace("command", cmd);
+		json.append("message", message);
+		json.append("status", status);
 	}
 }

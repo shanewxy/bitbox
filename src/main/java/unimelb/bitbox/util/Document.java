@@ -152,4 +152,10 @@ public class Document {
 			obj.replace(key, value);
 		}
 	}
+	
+	public void remove(String key){
+		if (obj.containsKey(key)) {
+			obj.remove(key);
+		}
+	}
 }

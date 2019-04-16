@@ -2,8 +2,6 @@ package unimelb.bitbox;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
@@ -11,7 +9,6 @@ import java.net.Socket;
 import java.util.ArrayList;
 
 import unimelb.bitbox.util.Document;
-import unimelb.bitbox.util.FileSystemManager;
 
 public class Connection extends Thread {
     BufferedReader in;
@@ -37,8 +34,7 @@ public class Connection extends Thread {
                 	ArrayList<Document> responses = handler.handleMsg(msg);
                 	if (responses!=null) {
                 		for (Document r : responses) {
-                			System.out.println("run here");
-                			out.write(r.toJson());
+                			out.write(r.toJson()+"\n");
                 			out.flush();
                 		}
 					}
