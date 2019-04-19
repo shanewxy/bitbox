@@ -21,7 +21,7 @@ public class MessageHandler {
      * handle incoming message
      */
     public boolean handleMsg(String msg) {
-        System.out.println(msg);
+        System.out.println("Handling: "+msg);
         Document json = Document.parse(msg);
         if (json.containsKey("command")) {
             cmd = json.getString("command");
@@ -54,7 +54,7 @@ public class MessageHandler {
         return result;
 
     }
-
+    
     /**
      * parse event to Json
      */
