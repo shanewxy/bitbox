@@ -33,8 +33,8 @@ public class Client implements Runnable {
         targetHostPort = new HostPort(peer);
         try {
             Socket s = new Socket(targetHostPort.host, targetHostPort.port);
-            in = new BufferedReader(new InputStreamReader(s.getInputStream()));
-            out = new BufferedWriter(new OutputStreamWriter(s.getOutputStream()));
+            in = new BufferedReader(new InputStreamReader(s.getInputStream(), "UTF-8"));
+            out = new BufferedWriter(new OutputStreamWriter(s.getOutputStream(), "UTF-8"));
             
             System.out.println("Initial socketd established: " + targetHostPort.toString());
             if(initConnection(s)) {
@@ -114,8 +114,6 @@ public class Client implements Runnable {
 //			System.out.println("Initial connection established with peer: " + targetHostPort.toString());
 			
 			System.out.println("Sending handshake request...");
-			out = new BufferedWriter(new OutputStreamWriter(client.getOutputStream(), "UTF-8"));
-			in = new BufferedReader(new InputStreamReader(client.getInputStream(), "UTF-8"));
 			
 			out.write(Protocol.createHandshakeRequestP(localHostPort));
 			out.flush();
