@@ -47,14 +47,16 @@ public class Server {
     }
 
     public void sendToClients(String msg) {
-        for (Connection connection : connections.keySet()) {
-            try {
-                connection.out.write(msg+System.lineSeparator());
-                connection.out.flush();
-            } catch (IOException e) {
-                e.printStackTrace();
+    	synchronized(connections) {
+            for (Connection connection : connections.keySet()) {
+                try {
+                    connection.out.write(msg+System.lineSeparator());
+                    connection.out.flush();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
             }
-        }
+    	}
     }
 
 }
