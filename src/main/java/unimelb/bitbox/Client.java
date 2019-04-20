@@ -22,6 +22,8 @@ public class Client implements Runnable {
     BufferedReader in;
     BufferedWriter out;
     public boolean connected = false;
+    private Socket s;
+    
     private MessageHandler handler;
     
     private HostPort targetHostPort;
@@ -32,7 +34,7 @@ public class Client implements Runnable {
         this.handler = handler;
         targetHostPort = new HostPort(peer);
         try {
-            Socket s = new Socket(targetHostPort.host, targetHostPort.port);
+            s = new Socket(targetHostPort.host, targetHostPort.port);
             in = new BufferedReader(new InputStreamReader(s.getInputStream(), "UTF-8"));
             out = new BufferedWriter(new OutputStreamWriter(s.getOutputStream(), "UTF-8"));
             
@@ -55,7 +57,7 @@ public class Client implements Runnable {
      */
     public void sendToServer(String msg) {
         try {
-            out.write(msg+"\n");
+            out.write(msg+System.lineSeparator());
             out.flush();
         } catch (IOException e) {
             e.printStackTrace();
@@ -69,9 +71,14 @@ public class Client implements Runnable {
             try {
 //                Thread.sleep(1000);
                 data = in.readLine();
-                if (data != null) {
-                    handler.handleMsg(data);
+                if (data == null) {
+                	System.out.println("Connection closed by server: "+targetHostPort.toString());
+                	in.close();
+                	out.close();
+                	s.close();
+                	return;
                 }
+                handler.handleMsg(data);
             } catch (IOException e) {
                 e.printStackTrace();
             }
