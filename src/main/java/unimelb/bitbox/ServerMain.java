@@ -24,7 +24,12 @@ public class ServerMain implements FileSystemObserver {
         fileSystemManager = new FileSystemManager(Configuration.getConfigurationValue("path"), this);
         handler = new MessageHandler(fileSystemManager);
         server = new Server(PORT, handler);
-        client = new Client(PEERS[0], handler);
+        for(String peer : PEERS) {
+            client = new Client(peer, handler);
+            if(client.connected) {
+            	break;
+            }
+        }
     }
 
     @Override
