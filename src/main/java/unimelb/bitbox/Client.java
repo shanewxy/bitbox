@@ -23,29 +23,21 @@ public class Client implements Runnable {
     public boolean connected = false;
     private Socket s;
     
-    private Boolean tryOther;
+//    private Boolean tryOther;
     
     private MessageHandler handler;
     
     private HostPort targetHostPort;
     
-    private ArrayList<Document> candidates;
+//    private ArrayList<Document> candidates;
     
     private static HostPort localHostPort = new HostPort(Configuration.getConfigurationValue("advertisedName"), Integer.parseInt(Configuration.getConfigurationValue("port")));
 
     public Client(String peer, MessageHandler handler) {
         this.handler = handler;
-        tryOther = false;
+//        tryOther = false;
         targetHostPort = new HostPort(peer);
         
-        createSocket();
-        
-        if(tryOther) {
-        	
-        }
-    }
-    
-    private void createSocket() {
         try {
             s = new Socket(targetHostPort.host, targetHostPort.port);
             in = new BufferedReader(new InputStreamReader(s.getInputStream(), "UTF-8"));
@@ -63,6 +55,10 @@ public class Client implements Runnable {
         } catch (IOException e) {
             System.out.println("IO:" + e.getMessage());
         }
+        
+//        if(tryOther) {
+//        	
+//        }
     }
 
     /**
@@ -115,8 +111,8 @@ public class Client implements Runnable {
 					 * if the received peer list is invalid, just regard it as an invalid protocol, but the 
 					 * connection is ended so it doesn't matter.
 					 */
-					tryOther = true;
-					candidates = new ArrayList<Document>();
+//					tryOther = true;
+//					candidates = new ArrayList<Document>();
 					return 0;
 				}else {
 					return -1;
@@ -129,6 +125,7 @@ public class Client implements Runnable {
 		}
 	}
     
+	@SuppressWarnings("unchecked")
 	public Boolean initConnection(Socket client) {
 		
 		try {
@@ -149,14 +146,13 @@ public class Client implements Runnable {
 					System.out.println("Received invalid protocol");
 					out.write(Protocol.createInvalidP("Invalid Message"));
 					out.flush();
-					in.close();
-					out.close();
 					client.close();
 					return false;
 				case 0:
 					System.out.println("The remote peer is already full, try other peers that provided by the remote one");
-//					connectOtherPeers((ArrayList<Document>) receivedCommand.get("peers"));
-					return false;
+					client.close();
+					
+					return connectOtherPeers((ArrayList<Document>) receivedCommand.get("peers"));
 				case 1:
 					System.out.println("Handshake request granted!");
 //					processMsg();
@@ -173,6 +169,35 @@ public class Client implements Runnable {
 			return false;
 		}
 		
+		return false;
+	}
+	
+	public Boolean connectOtherPeers(ArrayList<Document> peers) {
+		if(peers.size() == 0) {
+			System.out.println("Recieved empty peer list");
+			return false;
+		}
+		
+		for(Document peer : peers) {
+			targetHostPort = new HostPort(peer);
+			try {
+				System.out.println("Now trying other peers");
+				s = new Socket(targetHostPort.host, targetHostPort.port);
+				System.out.println("Initial socket established: "+targetHostPort.toString());
+				in = new BufferedReader(new InputStreamReader(s.getInputStream(), "UTF-8"));
+				out = new BufferedWriter(new OutputStreamWriter(s.getOutputStream(), "UTF-8"));
+				
+				return initConnection(s);
+				
+			} catch (UnknownHostException e) {
+				// TODO Auto-generated catch block
+				System.out.println("Invalid hostPort: "+targetHostPort.toString()+"///"+e.getMessage());
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				System.out.println("Failed to create socket: "+targetHostPort.toString()+"///"+e.getMessage());
+			}
+			
+		}
 		return false;
 	}
 
