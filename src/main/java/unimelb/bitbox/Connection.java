@@ -48,6 +48,7 @@ public class Connection extends Thread {
 							Server.clientCount.getAndIncrement();
 							out.write(Protocol.createHandshakeResponseP(Server.localHostPort));
 							out.flush();
+							handler.fileSystemManager.generateSyncEvents();
 							Server.connections.put(this, clientHostPort);
 							System.out.println("Now we have:"+Server.clientCount.get());
 						}else {
