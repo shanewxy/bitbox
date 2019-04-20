@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Logger;
@@ -17,13 +18,13 @@ public class Server {
     private static Logger log = Logger.getLogger(FileSystemManager.class.getName());
     private ServerSocket sock;
 
-    public List<Connection> connections = new ArrayList<Connection>();
+    public static HashMap<Connection, HostPort> connections = new HashMap<Connection, HostPort>();
     
 	public static int maximumConnections = Integer.parseInt(Configuration.getConfigurationValue("maximumIncommingConnections"));
 	
 	public static HostPort localHostPort = new HostPort(Configuration.getConfigurationValue("advertisedName"), Integer.parseInt(Configuration.getConfigurationValue("port")));
-
-    public Server(int port, MessageHandler handler) {
+	
+	public Server(int port, MessageHandler handler) {
         try {
             sock = new ServerSocket(port);
             clientCount = new AtomicInteger();
@@ -36,7 +37,7 @@ public class Server {
                     Socket socket = sock.accept();
                     Connection conn = new Connection(socket, handler);
                     conn.start();
-                    connections.add(conn);
+//                    connections.add(conn);
                 }
             } catch (IOException e) {
                 System.err.println(e);
@@ -46,7 +47,7 @@ public class Server {
     }
 
     public void sendToClients(String msg) {
-        for (Connection connection : connections) {
+        for (Connection connection : connections.keySet()) {
             try {
                 connection.out.write(msg+System.lineSeparator());
                 connection.out.flush();

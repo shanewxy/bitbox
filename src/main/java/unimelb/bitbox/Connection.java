@@ -21,6 +21,8 @@ public class Connection extends Thread {
     BufferedWriter out;
     protected Socket socket;
     private MessageHandler handler;
+    
+    private HostPort clientHostPort;
 
     public Connection(Socket socket, MessageHandler handler) {
         this.socket = socket;
@@ -40,33 +42,40 @@ public class Connection extends Thread {
 			if(handshake.getString("command").equals("HANDSHAKE_REQUEST")) {
 				try {
 					//Will throw a ClassCastException here if the port field is not a integer
-					hp = new HostPort((Document) handshake.get("hostPort"));
-					if(hp.host != null) {
+					clientHostPort = new HostPort((Document) handshake.get("hostPort"));
+					if(clientHostPort.host != null) {
 						if(Server.clientCount.get() < Server.maximumConnections) {
 							Server.clientCount.getAndIncrement();
 							out.write(Protocol.createHandshakeResponseP(Server.localHostPort));
 							out.flush();
+							Server.connections.put(this, clientHostPort);
+							System.out.println("Now we have:"+Server.clientCount.get());
 						}else {
-//							out.write(Protocol.createConnectionRefusedP(new ArrayList<HostPort>(clients.values())));
+							out.write(Protocol.createConnectionRefusedP(new ArrayList<HostPort>(Server.connections.values())));
+							out.flush();
 							socket.close();
 							return;
 						}
 					}else {
 						out.write(Protocol.createInvalidP("The host name should not be null!"));
+						out.flush();
 						socket.close();
 						return;
 					}
 				} catch (NullPointerException npe) {
 					out.write(Protocol.createInvalidP("Your handshake request should contain a hostPort field with not-null port and host!"));
+					out.flush();
 					socket.close();
 					return;
 				} catch (ClassCastException cce) {
 					out.write(Protocol.createInvalidP("The port number should be an integer!"));
+					out.flush();
 					socket.close();
 					return;
 				}
 			}else {
 				out.write(Protocol.createInvalidP("Your first message should be a handshake request rather than any other msg!"));
+				out.flush();
 				socket.close();
 				return;
 			}
@@ -77,6 +86,8 @@ public class Connection extends Thread {
 					System.out.println("Connection closed remotely ");
 					socket.close();
 					Server.clientCount.decrementAndGet();
+					Server.connections.remove(this);
+					System.out.println("Now we only have: "+Server.clientCount.get());
 					return;
 				}
 	            handler.handleMsg(msg);
@@ -84,7 +95,9 @@ public class Connection extends Thread {
 	        
 		} catch (EOFException e) {
 			System.out.println("Connection closed");
-			Server.clientCount.decrementAndGet();
+//			Server.clientCount.decrementAndGet();
+//			Server.connections.remove(this);
+//			System.out.println("Now we only have: "+Server.clientCount.get());
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
