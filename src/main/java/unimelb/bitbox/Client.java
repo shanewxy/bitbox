@@ -14,7 +14,6 @@ import java.util.ArrayList;
 
 import unimelb.bitbox.util.Configuration;
 import unimelb.bitbox.util.Document;
-import unimelb.bitbox.util.FileSystemManager;
 import unimelb.bitbox.util.HostPort;
 import unimelb.bitbox.util.Protocol;
 
@@ -24,15 +23,29 @@ public class Client implements Runnable {
     public boolean connected = false;
     private Socket s;
     
+    private Boolean tryOther;
+    
     private MessageHandler handler;
     
     private HostPort targetHostPort;
+    
+    private ArrayList<Document> candidates;
     
     private static HostPort localHostPort = new HostPort(Configuration.getConfigurationValue("advertisedName"), Integer.parseInt(Configuration.getConfigurationValue("port")));
 
     public Client(String peer, MessageHandler handler) {
         this.handler = handler;
+        tryOther = false;
         targetHostPort = new HostPort(peer);
+        
+        createSocket();
+        
+        if(tryOther) {
+        	
+        }
+    }
+    
+    private void createSocket() {
         try {
             s = new Socket(targetHostPort.host, targetHostPort.port);
             in = new BufferedReader(new InputStreamReader(s.getInputStream(), "UTF-8"));
@@ -102,6 +115,8 @@ public class Client implements Runnable {
 					 * if the received peer list is invalid, just regard it as an invalid protocol, but the 
 					 * connection is ended so it doesn't matter.
 					 */
+					tryOther = true;
+					candidates = new ArrayList<Document>();
 					return 0;
 				}else {
 					return -1;
