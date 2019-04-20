@@ -48,7 +48,7 @@ public class Server {
     public void sendToClients(String msg) {
         for (Connection connection : connections) {
             try {
-                connection.out.write(msg+"\n");
+                connection.out.write(msg+System.lineSeparator());
                 connection.out.flush();
             } catch (IOException e) {
                 e.printStackTrace();
