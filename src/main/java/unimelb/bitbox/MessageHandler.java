@@ -171,7 +171,8 @@ public class MessageHandler {
 						// System.out.println("tttttest: " +
 						// biteRequest.toJson());
 
-//						System.out.println("for test use : not complete yet");
+						// System.out.println("for test use : not complete
+						// yet");
 
 						return new ArrayList<Document>() {
 							{
@@ -180,9 +181,7 @@ public class MessageHandler {
 						};
 					}
 				}
-			} catch (
-
-			IOException e) {
+			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			} catch (NoSuchAlgorithmException e) {

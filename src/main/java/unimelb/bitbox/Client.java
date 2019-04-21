@@ -2,6 +2,8 @@ package unimelb.bitbox;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -16,156 +18,152 @@ import unimelb.bitbox.util.HostPort;
 import unimelb.bitbox.util.Protocol;
 
 public class Client implements Runnable {
-	BufferedReader in;
-	BufferedWriter out;
-	public boolean connected = false;
-	private Socket s;
+    BufferedReader in;
+    BufferedWriter out;
+    public boolean connected = false;
+    private Socket s;
+    
+//    private Boolean tryOther;
+    
+    private MessageHandler handler;
+    
+    private HostPort targetHostPort;
+    
+//    private ArrayList<Document> candidates;
+    
+    private static HostPort localHostPort = new HostPort(Configuration.getConfigurationValue("advertisedName"), Integer.parseInt(Configuration.getConfigurationValue("port")));
 
-	private MessageHandler handler;
+    public Client(String peer, MessageHandler handler) {
+        this.handler = handler;
+//        tryOther = false;
+        targetHostPort = new HostPort(peer);
+        
+        try {
+            s = new Socket(targetHostPort.host, targetHostPort.port);
+            in = new BufferedReader(new InputStreamReader(s.getInputStream(), "UTF-8"));
+            out = new BufferedWriter(new OutputStreamWriter(s.getOutputStream(), "UTF-8"));
+            
+            System.out.println("Initial socketd established: " + targetHostPort.toString());
+            if(initConnection(s)) {
+            	connected = true;
+            	new Thread(this).start();
+            }
+        } catch (UnknownHostException e) {
+            System.out.println("Sock:" + e.getMessage());
+        } catch (EOFException e) {
+            System.out.println("EOF:" + e.getMessage());
+        } catch (IOException e) {
+            System.out.println("IO:" + e.getMessage());
+        }
+        
+//        if(tryOther) {
+//        	
+//        }
+    }
 
-	private HostPort targetHostPort;
+    /**
+     * send message to server.
+     */
+    public void sendToServer(String msg) {
+        try {
+            out.write(msg+System.lineSeparator());
+            out.flush();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 
-	private static HostPort localHostPort = new HostPort(Configuration.getConfigurationValue("advertisedName"),
-			Integer.parseInt(Configuration.getConfigurationValue("port")));
-
-	public Client(String peer, MessageHandler handler) {
-		this.handler = handler;
-		targetHostPort = new HostPort(peer);
-		try {
-			s = new Socket(targetHostPort.host, targetHostPort.port);
-			in = new BufferedReader(new InputStreamReader(s.getInputStream(), "UTF-8"));
-			out = new BufferedWriter(new OutputStreamWriter(s.getOutputStream(), "UTF-8"));
-
-			System.out.println("Initial socketd established: " + targetHostPort.toString());
-			if (initConnection(s)) {
-				connected = true;
-				new Thread(this).start();
-			}
-		} catch (UnknownHostException e) {
-			System.out.println("Sock:" + e.getMessage());
-		} catch (EOFException e) {
-			System.out.println("EOF:" + e.getMessage());
-		} catch (IOException e) {
-			System.out.println("IO:" + e.getMessage());
-		}
-	}
-
-	/**
-	 * send message to server.
-	 */
-	public void sendToServer(String msg) {
-		try {
-			if (out != null) {
-
-				out.write(msg + System.lineSeparator());
-				out.flush();
-			}
-		}
-
-		catch (UnknownHostException e) {
-			System.out.println("Sock:" + e.getMessage());
-		} catch (EOFException e) {
-			System.out.println("EOF:" + e.getMessage());
-		} catch (IOException e) {
-			System.out.println("IO:" + e.getMessage());
-		}
-	}
-
-	@Override
-	public void run() {
-		while (true) {
-			String data = null;
-			try {
-				// Thread.sleep(1000);
-				data = in.readLine();
-				if (data == null) {
-					System.out.println("Connection closed by server: " + targetHostPort.toString());
-					in.close();
-					out.close();
-					s.close();
-					return;
-				}
-				ArrayList<Document> responses = handler.handleMsg(data);
+    @Override
+    public void run() {
+        while (true) {
+            String data = null;
+            try {
+//                Thread.sleep(1000);
+                data = in.readLine();
+                if (data == null) {
+                	System.out.println("Connection closed by server: "+targetHostPort.toString());
+                	in.close();
+                	out.close();
+                	s.close();
+                	return;
+                }
+                ArrayList<Document> responses = handler.handleMsg(data);
 				if (responses != null) {
 					for (Document r : responses) {
 						sendToServer(r.toJson());
 					}
 				}
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-		}
-	}
-
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+    
 	private int validateInitialProtocol(Document proto) {
-
-		// This try-catch is too general because we don't know what happens when
-		// try to call get method to an empty JSON object
+		
+		//This try-catch is too general because we don't know what happens when try to call get method to an empty JSON object
 		try {
-			// The name of command written in the validating protocol
+			//The name of command written in the validating protocol
 			String commandField = proto.getString("command");
-
-			if (commandField != null) {
-				if (commandField.equals("HANDSHAKE_RESPONSE")) {
-					// An exception would be catch if something goes wrong while
-					// parsing the hostPort field of the protocol
+			
+			if(commandField != null) {
+				if(commandField.equals("HANDSHAKE_RESPONSE")) {
+					//An exception would be catch if something goes wrong while parsing the hostPort field of the protocol
 					HostPort hpField = new HostPort((Document) proto.get("hostPort"));
 					return 1;
-				} else if (commandField.equals("CONNECTION_REFUSED")) {
-					/*
-					 * Don't care about other fields in the protocol because the
-					 * connection will soon ended if the received peer list is
-					 * invalid, just regard it as an invalid protocol, but the
+				}else if(commandField.equals("CONNECTION_REFUSED")) {
+					/*Don't care about other fields in the protocol because the connection will soon ended
+					 * if the received peer list is invalid, just regard it as an invalid protocol, but the 
 					 * connection is ended so it doesn't matter.
 					 */
+//					tryOther = true;
+//					candidates = new ArrayList<Document>();
 					return 0;
-				} else {
+				}else {
 					return -1;
 				}
-			} else {
+			}else {
 				return -1;
 			}
-		} catch (Exception e) {
+		} catch(Exception e) {
 			return -1;
 		}
 	}
-
+    
+	@SuppressWarnings("unchecked")
 	public Boolean initConnection(Socket client) {
-
+		
 		try {
-			// client = new Socket(targetHostPort.host, targetHostPort.port);
-			// System.out.println("Initial connection established with peer: " +
-			// targetHostPort.toString());
-
+//			client = new Socket(targetHostPort.host, targetHostPort.port);
+//			System.out.println("Initial connection established with peer: " + targetHostPort.toString());
+			
 			System.out.println("Sending handshake request...");
-
+			
 			out.write(Protocol.createHandshakeRequestP(localHostPort));
 			out.flush();
-
+			
 			System.out.println("Waiting for handshake response...");
 			String s = in.readLine();
 			System.out.println(s);
 			Document receivedCommand = Document.parse(s);
-			switch (validateInitialProtocol(receivedCommand)) {
-			case -1:
-				System.out.println("Received invalid protocol");
-				out.write(Protocol.createInvalidP("Invalid Message"));
-				out.flush();
-				in.close();
-				out.close();
-				client.close();
-				return false;
-			case 0:
-				System.out.println("The remote peer is already full, try other peers that provided by the remote one");
-				// connectOtherPeers((ArrayList<Document>)
-				// receivedCommand.get("peers"));
-				return false;
-			case 1:
-				System.out.println("Handshake request granted!");
-				// processMsg();
-				return true;
+			switch(validateInitialProtocol(receivedCommand)) {
+				case -1:
+					System.out.println("Received invalid protocol");
+					out.write(Protocol.createInvalidP("Invalid Message"));
+					out.flush();
+					client.close();
+					return false;
+				case 0:
+					System.out.println("The remote peer is already full, try other peers that provided by the remote one");
+					client.close();
+					
+					return connectOtherPeers((ArrayList<Document>) receivedCommand.get("peers"));
+				case 1:
+					System.out.println("Handshake request granted!");
+//					processMsg();
+					return true;
 			}
-
+			
 		} catch (UnknownHostException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -175,7 +173,36 @@ public class Client implements Runnable {
 			System.out.println("Connection failed with remote peer: " + targetHostPort.toString());
 			return false;
 		}
-
+		
+		return false;
+	}
+	
+	public Boolean connectOtherPeers(ArrayList<Document> peers) {
+		if(peers.size() == 0) {
+			System.out.println("Recieved empty peer list");
+			return false;
+		}
+		
+		for(Document peer : peers) {
+			targetHostPort = new HostPort(peer);
+			try {
+				System.out.println("Now trying other peers");
+				s = new Socket(targetHostPort.host, targetHostPort.port);
+				System.out.println("Initial socket established: "+targetHostPort.toString());
+				in = new BufferedReader(new InputStreamReader(s.getInputStream(), "UTF-8"));
+				out = new BufferedWriter(new OutputStreamWriter(s.getOutputStream(), "UTF-8"));
+				
+				return initConnection(s);
+				
+			} catch (UnknownHostException e) {
+				// TODO Auto-generated catch block
+				System.out.println("Invalid hostPort: "+targetHostPort.toString()+"///"+e.getMessage());
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				System.out.println("Failed to create socket: "+targetHostPort.toString()+"///"+e.getMessage());
+			}
+			
+		}
 		return false;
 	}
 
