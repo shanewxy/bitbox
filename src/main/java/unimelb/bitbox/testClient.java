@@ -9,6 +9,7 @@ import java.io.OutputStreamWriter;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.HashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import unimelb.bitbox.util.Document;
 
@@ -35,45 +36,48 @@ public class testClient {
 //	}
 	
 	public static void main(String[] args) {
+		AtomicInteger i = new AtomicInteger();
+		System.out.println(i.get());
+		System.out.println(i.incrementAndGet());
 		// TODO Auto-generated method stub
-		try(Socket s = new Socket("43.240.97.106",3000);){
-			HashMap test = new HashMap();
-			String t = "haha";
-			test.put("abc", t);
-			long b = (long) test.get("abc");
-			int a = (int) b;
-			System.out.println("Socket established");
-			BufferedWriter out = new BufferedWriter(new OutputStreamWriter(s.getOutputStream(), "UTF-8"));
-			Document d = Document.parse("{\"command\":\"HANDSHAKE_REQUEST\",\"hostPort\":{\"host\":\"172.20.10.5\",\"port\":8111}}");
-			System.out.println("Sending...: "+d.toJson());
-			out.write(d.toJson()+"\n");
-			out.flush();
-			
-			System.out.println("Waiting....");
-			BufferedReader in = new BufferedReader(new InputStreamReader(s.getInputStream(), "UTF-8"));
-			while(true) {
-//				if(in.ready()) {
-					System.out.println(":)");
-					String ans = in.readLine();
-					System.out.println("Received: "+ans);
-//				}else {
-//					System.out.println(":(");
-//					try {
-//						Thread.sleep(1000);
-//					} catch (InterruptedException e) {
-//						// TODO Auto-generated catch block
-//						e.printStackTrace();
-//					}
-//				}
-				
-			}
-		} catch (UnknownHostException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.getMessage();
-		}
+//		try(Socket s = new Socket("43.240.97.106",3000);){
+//			HashMap test = new HashMap();
+//			String t = "haha";
+//			test.put("abc", t);
+//			long b = (long) test.get("abc");
+//			int a = (int) b;
+//			System.out.println("Socket established");
+//			BufferedWriter out = new BufferedWriter(new OutputStreamWriter(s.getOutputStream(), "UTF-8"));
+//			Document d = Document.parse("{\"command\":\"HANDSHAKE_REQUEST\",\"hostPort\":{\"host\":\"172.20.10.5\",\"port\":8111}}");
+//			System.out.println("Sending...: "+d.toJson());
+//			out.write(d.toJson()+"\n");
+//			out.flush();
+//			
+//			System.out.println("Waiting....");
+//			BufferedReader in = new BufferedReader(new InputStreamReader(s.getInputStream(), "UTF-8"));
+//			while(true) {
+////				if(in.ready()) {
+//					System.out.println(":)");
+//					String ans = in.readLine();
+//					System.out.println("Received: "+ans);
+////				}else {
+////					System.out.println(":(");
+////					try {
+////						Thread.sleep(1000);
+////					} catch (InterruptedException e) {
+////						// TODO Auto-generated catch block
+////						e.printStackTrace();
+////					}
+////				}
+//				
+//			}
+//		} catch (UnknownHostException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		} catch (IOException e) {
+//			// TODO Auto-generated catch block
+//			e.getMessage();
+//		}
 	}
 
 }

@@ -5,23 +5,31 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Logger;
-
+import unimelb.bitbox.util.Configuration;
 import unimelb.bitbox.util.FileSystemManager;
+import unimelb.bitbox.util.HostPort;
 
 public class Server {
 
-    public volatile static long clientCount = 0;
+
+    public static AtomicInteger clientCount;
     private static Logger log = Logger.getLogger(Server.class.getName());
     private ServerSocket sock;
 
     public List<Connection> connections = new ArrayList<Connection>();
+    
+	public static int maximumConnections = Integer.parseInt(Configuration.getConfigurationValue("maximumIncommingConnections"));
+	
+	public static HostPort localHostPort = new HostPort(Configuration.getConfigurationValue("advertisedName"), Integer.parseInt(Configuration.getConfigurationValue("port")));
 
     public Server(int port, MessageHandler handler) {
         try {
             sock = new ServerSocket(port);
-        } catch (IOException e1) {
-            e1.printStackTrace();
+            clientCount = new AtomicInteger();
+        } catch (IOException e) {
+            e.printStackTrace();
         }
         Runnable listener = () -> {
             try {
@@ -42,9 +50,10 @@ public class Server {
         for (Connection connection : connections) {
             try {
             	if (connection != null) {
-					connection.out.write(msg + "\n");
-					connection.out.flush();
+            		 connection.out.write(msg+System.lineSeparator());
+                     connection.out.flush();
 				}
+               
             } catch (IOException e) {
                 e.printStackTrace();
             }
