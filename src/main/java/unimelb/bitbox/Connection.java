@@ -84,7 +84,7 @@ public class Connection extends Thread {
 				ArrayList<Document> responses = handler.handleMsg(msg);
 				if (responses != null) {
 					for (Document r : responses) {
-						out.write(r.toJson() + "\n");
+						out.write(r.toJson() + System.lineSeparator());
 						out.flush();
 					}
 				}
