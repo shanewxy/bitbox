@@ -42,23 +42,25 @@ public class MessageHandler {
 		Document json = (Document) Document.parse(msg);
 		// parseJsonMsg(msg);
 		String command = json.getString("command");
+		String pathName = json.getString("pathName");
 		ArrayList<Document> responses = new ArrayList<Document>();
 		boolean result = false;
 		// String returnMsg = "";
 
 		switch (command) {
-		// case "FILE_DELETE_REQUEST":
-		// if (fileSystemManager.fileNameExists(pathName))
-		// result = fileSystemManager.deleteFile(pathName, lastModified, md5);
-		// break;
-		//
-		// case "DIRECTORY_CREATE_REQUEST":
-		// result = fileSystemManager.makeDirectory(pathName);
-		// break;
-		//
-		// case "DIRECTORY_DELETE_REQUEST":
-		// result = fileSystemManager.deleteDirectory(pathName);
-		// break;
+//		case "FILE_DELETE_REQUEST":
+//			if (fileSystemManager.fileNameExists(pathName))
+//				result = fileSystemManager.deleteFile(pathName, lastModified, md5);
+//			break;
+
+		case "DIRECTORY_CREATE_REQUEST":
+			
+			result = fileSystemManager.makeDirectory(pathName);
+			break;
+
+		case "DIRECTORY_DELETE_REQUEST":
+			result = fileSystemManager.deleteDirectory(pathName);
+			break;
 
 		case "FILE_CREATE_REQUEST":
 			responses = handleFileCreateRequest(json);
@@ -173,9 +175,9 @@ public class MessageHandler {
 		} else {
 			try {
 				if (fileSystemManager.createFileLoader(pathName, md5, fileSize, lastModified)) {
-						
+
 					result = true;
-					
+
 					if (fileSystemManager.checkShortcut(pathName)) {
 						// use a local copy
 						message = "use a local copy to create the file";
@@ -188,26 +190,28 @@ public class MessageHandler {
 						Document json2 = Document.parse(json.toJson());
 						json2.replace("command", "FILE_BYTES_REQUEST");
 						json2.append("position", 0);
-						json2.append("length", BLOCKSIZE);
+						if (fileSize < BLOCKSIZE) {
+							json2.append("length", fileSize);
+						}else {
+							
+							json2.append("length", BLOCKSIZE);
+						}
 
 						responses.add(json1);
 						responses.add(json2);
 
 						return responses;
 					}
-				}else {
+				} else {
 					message = "file loader already exists";
 				}
 			} catch (NoSuchAlgorithmException e) {
 				e.printStackTrace();
 			} catch (IOException e) {
-				e.printStackTrace();
-			} 
-//			finally {
-//				appendResponseInfo(json, "FILE_CREATE_RESPONSE", message, result);
-//				responses.add(json);
-//				return responses;
-//			}
+				System.out.println("file loader already exists");
+//				message = "file loader already exists";
+			}
+			
 		}
 
 		appendResponseInfo(json, "FILE_CREATE_RESPONSE", message, result);
@@ -251,15 +255,15 @@ public class MessageHandler {
 			message = e.getMessage();
 		} catch (IOException e) {
 			message = e.getMessage();
-		} 
-//		finally {
-//			appendResponseInfo(json, "FILE_BYTES_RESPONSE", message, result);
-//			responses.add(json);
-//			return responses;
-//		}
-		 appendResponseInfo(json, "FILE_BYTES_RESPONSE", message, result);
-		 responses.add(json);
-		 return responses;
+		}
+		// finally {
+		// appendResponseInfo(json, "FILE_BYTES_RESPONSE", message, result);
+		// responses.add(json);
+		// return responses;
+		// }
+		appendResponseInfo(json, "FILE_BYTES_RESPONSE", message, result);
+		responses.add(json);
+		return responses;
 	}
 
 	/**
@@ -273,7 +277,9 @@ public class MessageHandler {
 		String content = json.getString("content");
 		long position = json.getLong("position");
 		String pathName = json.getString("pathName");
-
+		
+		Document fileDescriptor = (Document) json.get("fileDescriptor");
+		long fileSize = fileDescriptor.getLong("fileSize");
 		boolean result = false;
 
 		Base64.Decoder decoder = Base64.getDecoder(); // get decoder
@@ -295,7 +301,13 @@ public class MessageHandler {
 					json.remove("status");
 					long p = json.getLong("position");
 					json.remove("position");
-					json.append("position", (p + buffer.capacity()));
+					
+					if (fileSize-position < BLOCKSIZE) {
+						json.append("position", fileSize-position);
+					}else {
+						json.append("position", (p + buffer.capacity()));
+					}
+					
 					responses.add(json);
 				}
 
