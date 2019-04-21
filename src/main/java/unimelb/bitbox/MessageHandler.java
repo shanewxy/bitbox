@@ -23,8 +23,6 @@ public class MessageHandler {
 	String md5 = null;
 	long fileSize;
 	FileSystemManager fileSystemManager;
-	String host = null;
-	long port;
 	boolean status;
 	String message;
 	String content;
@@ -42,8 +40,10 @@ public class MessageHandler {
 	public ArrayList<Document> handleMsg(String msg) {
 		System.out.println(msg);
 		parseJsonMsg(msg);
-
+		ArrayList<Document> responses = new ArrayList<Document>();
 		boolean result = false;
+		String returnMsg = "";
+
 		switch (cmd) {
 		case "FILE_DELETE_REQUEST":
 			if (fileSystemManager.fileNameExists(pathName))
@@ -57,16 +57,22 @@ public class MessageHandler {
 			break;
 		case "FILE_CREATE_REQUEST":
 			Document json = Document.parse(msg);
+			// ArrayList<Document> responses = new ArrayList<Document>();
 
-			ArrayList<Document> responses = new ArrayList<Document>();
 			if (!fileSystemManager.isSafePathName(pathName)) {
-				appendResponseInfo(json, "FILE_CREATE_RESPONSE", "unsafe pathname given", false);
-				responses.add(json);
-				return responses;
+				returnMsg = "unsafe pathname given";
+
+				// appendResponseInfo(json, "FILE_CREATE_RESPONSE", "unsafe
+				// pathname given", false);
+				// responses.add(json);
+				// return responses;
 			} else if (fileSystemManager.fileNameExists(pathName)) {
-				appendResponseInfo(json, "FILE_CREATE_RESPONSE", "pathname already exists", false);
-				responses.add(json);
-				return responses;
+				returnMsg = "pathname already exists";
+
+				// appendResponseInfo(json, "FILE_CREATE_RESPONSE", "pathname
+				// already exists", false);
+				// responses.add(json);
+				// return responses;
 			} else {
 				try {
 					// if (!fileSystemManager.createFileLoader(pathName, md5,
@@ -76,12 +82,14 @@ public class MessageHandler {
 					// responses.add(json);
 					// return responses;
 					// } else
-					result = fileSystemManager.createFileLoader(pathName, md5, fileSize, lastModified);
+					fileSystemManager.createFileLoader(pathName, md5, fileSize, lastModified);
 					if (fileSystemManager.checkShortcut(pathName)) {
 						// use a local copy
-						appendResponseInfo(json, "FILE_CREATE_RESPONSE", "use a local copy to create the file", true);
-						responses.add(json);
-						return responses;
+						returnMsg = "use a local copy to create the file";
+						// appendResponseInfo(json, "FILE_CREATE_RESPONSE", "use
+						// a local copy to create the file", true);
+						// responses.add(json);
+						// return responses;
 					} else {
 						Document json1 = Document.parse(msg);
 						appendResponseInfo(json1, "FILE_CREATE_RESPONSE", "file loader ready", true);
@@ -97,55 +105,66 @@ public class MessageHandler {
 						return responses;
 					}
 				} catch (NoSuchAlgorithmException e) {
-					e.printStackTrace();
+					returnMsg = e.getMessage();
 				} catch (IOException e) {
-					appendResponseInfo(json, "FILE_CREATE_RESPONSE", e.getMessage(), result);
-					responses.add(json);
-					return responses;
+					returnMsg = e.getMessage();
+					// appendResponseInfo(json, "FILE_CREATE_RESPONSE",
+					// e.getMessage(), result);
+					// responses.add(json);
+					// return responses;
 				}
+				appendResponseInfo(json, "FILE_CREATE_RESPONSE", returnMsg, result);
+				responses.add(json);
 				return responses;
 			}
+			break;
 		case "FILE_CREATE_RESPONSE":
-			log.info("message :" + message + " status : " + status);
+			log.info("command :" + cmd + "message :" + message + " status : " + status);
 			break;
 		case "FILE_BYTES_REQUEST":
+			Document response = Document.parse(msg);
 			try {
 				// if (fileSize > BLOCKSIZE) {
 				// System.out.println("this file needs to separately");
 				// }
 				ByteBuffer buffer = fileSystemManager.readFile(md5, position,
 						(fileSize - position) > BLOCKSIZE ? BLOCKSIZE : (fileSize - position));
-				Document response = Document.parse(msg);
 				if (buffer != null) {
 
 					Base64.Encoder encoder = Base64.getEncoder(); // get encoder
 					buffer.flip();
 					byte[] bytes = new byte[buffer.limit()];
 					buffer.get(bytes);
-					content = encoder.encodeToString(bytes);
+					//content = encoder.encodeToString(bytes);
 
-					response.append("content", content);
-					appendResponseInfo(response, "FILE_BYTES_RESPONSE", "successful read", true);
+					response.append("content", encoder.encodeToString(bytes));
+					returnMsg = "successful read";
+					result = true;
+					//appendResponseInfo(response, "FILE_BYTES_RESPONSE", "successful read", true);
 
 				} else {
-					appendResponseInfo(response, "FILE_BYTES_RESPONSE",
-							"unsuccessful read, failed to read from source file", false);
+					returnMsg = "unsuccessful read, failed to read from source file";
+//					appendResponseInfo(response, "FILE_BYTES_RESPONSE",
+//							"unsuccessful read, failed to read from source file", false);
 				}
-				return new ArrayList<Document>() {
-					{
-						add(response);
-					}
-				};
+				// return new ArrayList<Document>() {
+				// {
+				// add(response);
+				// }
+				// };
 
 			} catch (NoSuchAlgorithmException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+				returnMsg = e.getMessage();
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+				returnMsg = e.getMessage();
 			}
-			break;
+			appendResponseInfo(response, "FILE_BYTES_RESPONSE", returnMsg, result);
+			responses.add(response);
+			return responses;
+			//break;
 		case "FILE_BYTES_RESPONSE":
+			Document byteRequest = Document.parse(msg);
+			
 			Base64.Decoder decoder = Base64.getDecoder(); // get decoder
 			byte[] bytes = decoder.decode(content);
 			ByteBuffer buffer = ByteBuffer.allocate(bytes.length);
@@ -156,11 +175,10 @@ public class MessageHandler {
 			try {
 				if (fileSystemManager.writeFile(pathName, buffer, position)) {
 					if (fileSystemManager.checkWriteComplete(pathName)) {
-						System.out.println("for test use : wirte done-------");
+						//System.out.println("for test use : wirte done-------");
 						break;
 					} else {
 
-						Document byteRequest = Document.parse(msg);
 						byteRequest.replace("command", "FILE_BYTES_REQUEST");
 						byteRequest.remove("content");
 						byteRequest.remove("message");
@@ -174,21 +192,22 @@ public class MessageHandler {
 						// System.out.println("for test use : not complete
 						// yet");
 
-						return new ArrayList<Document>() {
-							{
-								add(byteRequest);
-							}
-						};
+//						return new ArrayList<Document>() {
+//							{
+//								add(byteRequest);
+//							}
+//						};
 					}
 				}
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
 			} catch (NoSuchAlgorithmException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+				returnMsg = e.getMessage();
+			} catch (IOException e) {
+				returnMsg = e.getMessage();
 			}
-			break;
+			appendResponseInfo(byteRequest, "FILE_BYTES_REQUEST", returnMsg, result);
+			responses.add(byteRequest);
+			return responses;
+			//break;
 		}
 		return null;
 	}
@@ -228,14 +247,6 @@ public class MessageHandler {
 			}
 			if (fileDescriptor.containsKey("fileSize")) {
 				fileSize = fileDescriptor.getLong("fileSize");
-			}
-		}
-		if (json.containsKey("hostPort")) {
-			Document hostPort = (Document) json.get("hostPort");
-			if (hostPort.containsKey(host)) {
-				host = hostPort.getString("host");
-			} else if (hostPort.containsKey("port")) {
-				port = hostPort.getLong("port");
 			}
 		}
 		if (json.containsKey("status")) {
