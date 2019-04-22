@@ -7,6 +7,8 @@ import java.util.ArrayList;
 import java.util.Base64;
 import java.util.logging.Logger;
 
+import javax.print.Doc;
+
 import unimelb.bitbox.util.Configuration;
 import unimelb.bitbox.util.Document;
 import unimelb.bitbox.util.FileSystemManager;
@@ -41,11 +43,11 @@ public class MessageHandler {
 		System.out.println(msg);
 		Document json = (Document) Document.parse(msg);
 		// parseJsonMsg(msg);
-		String command = json.getString("command");
+		
 		String pathName = json.getString("pathName");
+		String command = json.getString("command");
 		ArrayList<Document> responses = new ArrayList<Document>();
 		boolean result = false;
-		// String returnMsg = "";
 
 		switch (command) {
 //		case "FILE_DELETE_REQUEST":
@@ -54,12 +56,61 @@ public class MessageHandler {
 //			break;
 
 		case "DIRECTORY_CREATE_REQUEST":
-			
-			result = fileSystemManager.makeDirectory(pathName);
-			break;
+			Document DirCResp = new Document();
+			DirCResp.append("command", "DIRECTORY_CREATE_RESPONSE");
+			DirCResp.append("pathName", pathName);
+			try {
+				if (!fileSystemManager.isSafePathName(pathName)) {
+					DirCResp.append("message", "unsafe pathname given");
+					DirCResp.append("status", false);
+				} else {
+					if (fileSystemManager.dirNameExists(pathName)) {
+						DirCResp.append("message", "pathname already exists");
+						DirCResp.append("status", false);
+					} else {
+						if (fileSystemManager.makeDirectory(pathName)) {
+							DirCResp.append("message", "directory created");
+							DirCResp.append("status", true);
+						}
 
+					}
+				}
+			} catch (Exception e) {
+				DirCResp.append("message", "there was a problem creating the directory");
+				DirCResp.append("status", false);
+			}
+			responses.add(DirCResp);
+			break;
 		case "DIRECTORY_DELETE_REQUEST":
-			result = fileSystemManager.deleteDirectory(pathName);
+			Document DirDResp = new Document();
+			DirDResp.append("command", "DIRECTORY_DELETE_RESPONSE");
+			DirDResp.append("pathName", pathName);
+			try {
+				if (!fileSystemManager.isSafePathName(pathName)) {
+					DirDResp.append("message", "unsafe pathname given");
+					DirDResp.append("status", false);
+				} else {
+					if (!fileSystemManager.dirNameExists(pathName)) {
+						DirDResp.append("message", "pathname does not exists");
+						DirDResp.append("status", false);
+					} else {
+						if (fileSystemManager.deleteDirectory(pathName)) {
+							DirDResp.append("message", "directory deleted");
+							DirDResp.append("status", true);
+						}
+					}
+				}
+			} catch (Exception e) {
+				DirDResp.append("message", "there was a problem deleting the directory");
+				DirDResp.append("status", false);
+			}
+			responses.add(DirDResp);
+			break;
+		case "DIRECTORY_CREATE_RESPONSE":
+			log.info("message :" + json.getString("message") + " status : " + json.getBoolean("status"));
+			break;
+		case "DIRECTORY_DELETE_RESPONSE":
+			log.info("message :" + json.getString("message") + " status : " + json.getBoolean("status"));
 			break;
 
 		case "FILE_CREATE_REQUEST":
@@ -209,7 +260,6 @@ public class MessageHandler {
 				e.printStackTrace();
 			} catch (IOException e) {
 				System.out.println("file loader already exists");
-//				message = "file loader already exists";
 			}
 			
 		}
@@ -256,11 +306,6 @@ public class MessageHandler {
 		} catch (IOException e) {
 			message = e.getMessage();
 		}
-		// finally {
-		// appendResponseInfo(json, "FILE_BYTES_RESPONSE", message, result);
-		// responses.add(json);
-		// return responses;
-		// }
 		appendResponseInfo(json, "FILE_BYTES_RESPONSE", message, result);
 		responses.add(json);
 		return responses;
@@ -280,7 +325,6 @@ public class MessageHandler {
 		
 		Document fileDescriptor = (Document) json.get("fileDescriptor");
 		long fileSize = fileDescriptor.getLong("fileSize");
-		boolean result = false;
 
 		Base64.Decoder decoder = Base64.getDecoder(); // get decoder
 		byte[] bytes = decoder.decode(content);
@@ -299,15 +343,12 @@ public class MessageHandler {
 					json.remove("content");
 					json.remove("message");
 					json.remove("status");
-					long p = json.getLong("position");
-					json.remove("position");
 					
 					if (fileSize-position < BLOCKSIZE) {
-						json.append("position", fileSize-position);
+						json.replace("position", fileSize-position);
 					}else {
-						json.append("position", (p + buffer.capacity()));
+						json.replace("position", json.getLong("position")+buffer.capacity());
 					}
-					
 					responses.add(json);
 				}
 
@@ -317,13 +358,6 @@ public class MessageHandler {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		// json.replace("command", "FILE_BYTES_REQUEST");
-		// json.remove("content");
-		// json.remove("message");
-		// json.remove("status");
-		// long p = json.getLong("position");
-		// json.remove("position");
-		// json.append("position", (p + buffer.capacity()));
 		return responses;
 	}
 }

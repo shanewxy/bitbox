@@ -153,6 +153,13 @@ public class Document {
 		}
 	}
 	
+	@SuppressWarnings("unchecked")
+	public void replace(String key,long value){
+		if (obj.containsKey(key)) {
+			obj.replace(key, value);
+		}
+	}
+	
 	public void remove(String key){
 		if (obj.containsKey(key)) {
 			obj.remove(key);

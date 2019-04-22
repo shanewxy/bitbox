@@ -13,11 +13,6 @@ import unimelb.bitbox.util.FileSystemManager.FileSystemEvent;
  */
 public class Protocol {
 	
-//	private final static String FILE_BITES_REQUEST = "FILE_BITES_REQUEST";
-//	private final static String FILE_BITES_RESPONSE = "FILE_BITES_RESPONSE";
-//	private final static String FILE_CREATE_REQUEST = "FILE_CREATE_REQUEST";
-//	private final static String FILE_CREATE_RESPONSE = "FILE_CREATE_RESPONSE";
-	
 	public static String createInvalidP(String wrongMsg) {
 		Document doc = new Document();
 		
@@ -55,11 +50,5 @@ public class Protocol {
 		doc.append("hostPort", hp.toDoc());
 		return doc.toJson()+System.lineSeparator();
 	}
-
-//	public static String createFileCreateResponseP(){
-//		
-//	}
-//	
-	
 
 }
