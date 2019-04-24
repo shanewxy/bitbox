@@ -11,6 +11,7 @@ import java.io.OutputStreamWriter;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.List;
 
 import unimelb.bitbox.util.Configuration;
 import unimelb.bitbox.util.Document;
@@ -87,7 +88,7 @@ public class Client implements Runnable {
                 	s.close();
                 	return;
                 }
-                ArrayList<Document> responses = handler.handleMsg(data);
+                List<Document> responses = handler.handleMsg(data);
 				if (responses != null) {
 					for (Document r : responses) {
 						sendToServer(r.toJson());

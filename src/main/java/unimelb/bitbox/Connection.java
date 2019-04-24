@@ -10,6 +10,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.List;
 
 import unimelb.bitbox.util.Document;
 import unimelb.bitbox.util.FileSystemManager;
@@ -91,7 +92,7 @@ public class Connection extends Thread {
 					System.out.println("Now we only have: "+Server.clientCount.get());
 					return;
 				}
-	            ArrayList<Document> responses = handler.handleMsg(msg);
+	            List<Document> responses = handler.handleMsg(msg);
 				if (responses != null) {
 					for (Document r : responses) {
 						out.write(r.toJson() + System.lineSeparator());

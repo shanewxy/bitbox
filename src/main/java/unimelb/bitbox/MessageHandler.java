@@ -5,15 +5,12 @@ import java.nio.ByteBuffer;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.List;
 import java.util.logging.Logger;
-
-import javax.print.Doc;
 
 import unimelb.bitbox.util.Configuration;
 import unimelb.bitbox.util.Document;
 import unimelb.bitbox.util.FileSystemManager;
-import unimelb.bitbox.util.FileSystemManager.EVENT;
-import unimelb.bitbox.util.FileSystemManager.FileDescriptor;
 import unimelb.bitbox.util.FileSystemManager.FileSystemEvent;
 
 public class MessageHandler {
@@ -31,7 +28,7 @@ public class MessageHandler {
     /**
      * handle incoming message
      */
-    public ArrayList<Document> handleMsg(String msg) {
+    public List<Document> handleMsg(String msg) {
         System.out.println(msg);
         Document json = (Document) Document.parse(msg);
         String pathName = json.getString("pathName");
@@ -44,7 +41,7 @@ public class MessageHandler {
             md5 = fileDescriptor.getString("md5");
         }
 
-        ArrayList<Document> responses = new ArrayList<Document>();
+        List<Document> responses = new ArrayList<Document>();
 
         boolean result = false;
 
@@ -52,7 +49,9 @@ public class MessageHandler {
         case "FILE_DELETE_REQUEST":
             responses.add(handleFileDeleteRequest(json));
             break;
-
+        case "FILE_MODIFY_REQUEST":
+            responses = handleFileModifyRequest(json);
+            break;
         case "DIRECTORY_CREATE_REQUEST":
             Document DirCResp = new Document();
             DirCResp.append("command", "DIRECTORY_CREATE_RESPONSE");
@@ -149,15 +148,71 @@ public class MessageHandler {
         } else if (!fileSystemManager.fileNameExists(pathName)) {
             message = "pathname does not exist";
         } else {
-            try {
-                status = fileSystemManager.deleteFile(pathName, lastModified, md5);
+            if (fileSystemManager.deleteFile(pathName, lastModified, md5)) {
+                status = true;
                 message = "file successfully deleted";
-            } catch (Exception e) {
+            } else
                 message = "there was a problem deleting the file";
-            }
         }
+
         appendResponseInfo(json, Command.FILE_DELETE_RESPONSE, message, status);
         return json;
+    }
+
+    private List<Document> handleFileModifyRequest(Document json) {
+        List<Document> responses = new ArrayList();
+        String message = "";
+        boolean status = false;
+        String pathName = json.getString("pathName");
+        Document fileDescriptor = (Document) json.get("fileDescriptor");
+        long lastModified = fileDescriptor.getLong("lastModified");
+        long fileSize = fileDescriptor.getLong("fileSize");
+        String md5 = fileDescriptor.getString("md5");
+        Document json1 = Document.parse(json.toJson());
+        if (!fileSystemManager.isSafePathName(pathName)) {
+            message = "unsafe pathname given";
+        } else if (!fileSystemManager.fileNameExists(pathName)) {
+            message = "pathname does not exist";
+        } else if (fileSystemManager.fileNameExists(pathName, md5)) {
+            message = "pathname already exists with matching content";
+        } else {
+            try {
+                fileSystemManager.cancelFileLoader(pathName);
+                if (fileSystemManager.modifyFileLoader(pathName, md5, lastModified)) {
+                    status = true;
+                    if (fileSystemManager.checkShortcut(pathName)) {
+                        // use a local copy
+                        message = "use a local copy to create the file";
+
+                    } else {
+                        message = "file loader ready";
+
+                        Document json2 = Document.parse(json.toJson());
+                        json2.replace("command", "FILE_BYTES_REQUEST");
+                        json2.append("position", 0);
+                        if (fileSize < BLOCKSIZE) {
+                            json2.append("length", fileSize);
+                        } else {
+                            json2.append("length", BLOCKSIZE);
+                        }
+
+                        responses.add(json2);
+
+                    }
+                } else {
+                    message = "there was a problem modifying the file";
+                }
+
+            } catch (IOException e) {
+                message = "file loader already exists";
+
+            } catch (NoSuchAlgorithmException e) {
+                e.printStackTrace();
+            }
+        }
+        appendResponseInfo(json1, Command.FILE_MODIFY_RESPONSE, message, status);
+        responses.add(json1);
+        return responses;
     }
 
     /**
@@ -194,15 +249,14 @@ public class MessageHandler {
      */
     public ArrayList<Document> handleFileCreateRequest(Document json) {
         ArrayList<Document> responses = new ArrayList<Document>();
-
         String message = "";
         boolean result = false;
-
         String pathName = json.getString("pathName");
         Document fileDescriptor = (Document) json.get("fileDescriptor");
         String md5 = fileDescriptor.getString("md5");
         long fileSize = fileDescriptor.getLong("fileSize");
         long lastModified = fileDescriptor.getLong("lastModified");
+        Document json1 = Document.parse(json.toJson());
 
         if (!fileSystemManager.isSafePathName(pathName)) {
             message = "unsafe pathname given";
@@ -210,6 +264,7 @@ public class MessageHandler {
             message = "pathname already exists";
         } else {
             try {
+                fileSystemManager.cancelFileLoader(pathName);
                 if (fileSystemManager.createFileLoader(pathName, md5, fileSize, lastModified)) {
 
                     result = true;
@@ -217,12 +272,8 @@ public class MessageHandler {
                     if (fileSystemManager.checkShortcut(pathName)) {
                         // use a local copy
                         message = "use a local copy to create the file";
-
                     } else {
-                        Document json1 = Document.parse(json.toJson());
                         message = "file loader ready";
-                        appendResponseInfo(json1, Command.FILE_CREATE_RESPONSE, message, result);
-
                         Document json2 = Document.parse(json.toJson());
                         json2.replace("command", "FILE_BYTES_REQUEST");
                         json2.append("position", 0);
@@ -233,24 +284,21 @@ public class MessageHandler {
                             json2.append("length", BLOCKSIZE);
                         }
 
-                        responses.add(json1);
                         responses.add(json2);
-
                         return responses;
                     }
                 } else {
-                    message = "file loader already exists";
+                    message = "there was a problem creating the file";
                 }
             } catch (NoSuchAlgorithmException e) {
                 e.printStackTrace();
             } catch (IOException e) {
-                System.out.println("file loader already exists");
+                message = "file loader already exists";
             }
 
         }
-
-        appendResponseInfo(json, Command.FILE_CREATE_RESPONSE, message, result);
-        responses.add(json);
+        appendResponseInfo(json1, Command.FILE_CREATE_RESPONSE, message, result);
+        responses.add(json1);
         return responses;
     }
 
