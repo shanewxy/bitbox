@@ -53,55 +53,10 @@ public class MessageHandler {
             responses = handleFileModifyRequest(json);
             break;
         case "DIRECTORY_CREATE_REQUEST":
-            Document DirCResp = new Document();
-            DirCResp.append("command", "DIRECTORY_CREATE_RESPONSE");
-            DirCResp.append("pathName", pathName);
-            try {
-                if (!fileSystemManager.isSafePathName(pathName)) {
-                    DirCResp.append("message", "unsafe pathname given");
-                    DirCResp.append("status", false);
-                } else {
-                    if (fileSystemManager.dirNameExists(pathName)) {
-                        DirCResp.append("message", "pathname already exists");
-                        DirCResp.append("status", false);
-                    } else {
-                        if (fileSystemManager.makeDirectory(pathName)) {
-                            DirCResp.append("message", "directory created");
-                            DirCResp.append("status", true);
-                        }
-
-                    }
-                }
-            } catch (Exception e) {
-                DirCResp.append("message", "there was a problem creating the directory");
-                DirCResp.append("status", false);
-            }
-            responses.add(DirCResp);
+            responses=handleDirCreateRequest(json);
             break;
         case "DIRECTORY_DELETE_REQUEST":
-            Document DirDResp = new Document();
-            DirDResp.append("command", "DIRECTORY_DELETE_RESPONSE");
-            DirDResp.append("pathName", pathName);
-            try {
-                if (!fileSystemManager.isSafePathName(pathName)) {
-                    DirDResp.append("message", "unsafe pathname given");
-                    DirDResp.append("status", false);
-                } else {
-                    if (!fileSystemManager.dirNameExists(pathName)) {
-                        DirDResp.append("message", "pathname does not exists");
-                        DirDResp.append("status", false);
-                    } else {
-                        if (fileSystemManager.deleteDirectory(pathName)) {
-                            DirDResp.append("message", "directory deleted");
-                            DirDResp.append("status", true);
-                        }
-                    }
-                }
-            } catch (Exception e) {
-                DirDResp.append("message", "there was a problem deleting the directory");
-                DirDResp.append("status", false);
-            }
-            responses.add(DirDResp);
+        	responses=handleDirDeleteRequest(json);
             break;
         case "DIRECTORY_CREATE_RESPONSE":
             log.info("message :" + json.getString("message") + " status : " + json.getBoolean("status"));
@@ -214,6 +169,71 @@ public class MessageHandler {
         responses.add(json1);
         return responses;
     }
+    
+  //handle DIRECTORY_CREATE_RESPONSE
+    
+    private List<Document> handleDirCreateRequest(Document json) {
+    	List<Document> responses = new ArrayList();
+    	String pathName = json.getString("pathName");
+    	Document DirCResp = new Document();
+        DirCResp.append("command", "DIRECTORY_CREATE_RESPONSE");
+        DirCResp.append("pathName", pathName);
+        try {
+            if (!fileSystemManager.isSafePathName(pathName)) {
+                DirCResp.append("message", "unsafe pathname given");
+                DirCResp.append("status", false);
+            } else {
+                if (fileSystemManager.dirNameExists(pathName)) {
+                    DirCResp.append("message", "pathname already exists");
+                    DirCResp.append("status", false);
+                } else {
+                    if (fileSystemManager.makeDirectory(pathName)) {
+                        DirCResp.append("message", "directory created");
+                        DirCResp.append("status", true);
+                    }
+
+                }
+            }
+        } catch (Exception e) {
+            DirCResp.append("message", "there was a problem creating the directory");
+            DirCResp.append("status", false);
+        }
+        responses.add(DirCResp);
+    	return responses;
+    }
+    
+    //handle DIRECTORY_DELETE_RESPONSE
+    
+    private List<Document> handleDirDeleteRequest(Document json) {
+    	List<Document> responses = new ArrayList();
+    	String pathName = json.getString("pathName");
+    	Document DirDResp = new Document();
+        DirDResp.append("command", "DIRECTORY_DELETE_RESPONSE");
+        DirDResp.append("pathName", pathName);
+        try {
+            if (!fileSystemManager.isSafePathName(pathName)) {
+                DirDResp.append("message", "unsafe pathname given");
+                DirDResp.append("status", false);
+            } else {
+                if (!fileSystemManager.dirNameExists(pathName)) {
+                    DirDResp.append("message", "pathname does not exists");
+                    DirDResp.append("status", false);
+                } else {
+                    if (fileSystemManager.deleteDirectory(pathName)) {
+                        DirDResp.append("message", "directory deleted");
+                        DirDResp.append("status", true);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            DirDResp.append("message", "there was a problem deleting the directory");
+            DirDResp.append("status", false);
+        }
+        responses.add(DirDResp);
+    	return responses;
+    }
+    
+    
 
     /**
      * parse event to Json
