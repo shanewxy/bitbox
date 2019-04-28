@@ -2,8 +2,6 @@ package unimelb.bitbox;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -12,31 +10,47 @@ import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Logger;
 
 import unimelb.bitbox.util.Configuration;
 import unimelb.bitbox.util.Document;
 import unimelb.bitbox.util.HostPort;
 import unimelb.bitbox.util.Protocol;
+import unimelb.bitbox.util.FileSystemManager.FileSystemEvent;
 
+/**
+ *The component of a peer that aims to handle communications between the local peer and the remote peer that we started to connect with
+ * @author Xueying Wang
+ * @author Yichen Liu
+ */
 public class Client implements Runnable {
     BufferedReader in;
     BufferedWriter out;
     public boolean connected = false;
     private Socket s;
     
-//    private Boolean tryOther;
-    
     private MessageHandler handler;
     
+    /**
+     * The ip address and port number of the peer that this client currently want to connect with
+     */
     private HostPort targetHostPort;
     
-//    private ArrayList<Document> candidates;
-    
+    /**
+     * The ip address and port number of the local peer
+     */
     private static HostPort localHostPort = new HostPort(Configuration.getConfigurationValue("advertisedName"), Integer.parseInt(Configuration.getConfigurationValue("port")));
 
+    private static Logger log = Logger.getLogger(MessageHandler.class.getName());
+    
+    /**
+     * The client object will try to connect with target peer when created, if connection successfully established,
+     * a new thread will be created for handling incoming messages.
+     * @param peer the ip address and port number of the peer we want to connect
+     * @param handler the message handler object
+     */
     public Client(String peer, MessageHandler handler) {
         this.handler = handler;
-//        tryOther = false;
         targetHostPort = new HostPort(peer);
         
         try {
@@ -44,22 +58,18 @@ public class Client implements Runnable {
             in = new BufferedReader(new InputStreamReader(s.getInputStream(), "UTF-8"));
             out = new BufferedWriter(new OutputStreamWriter(s.getOutputStream(), "UTF-8"));
             
-            System.out.println("Initial socketd established: " + targetHostPort.toString());
+            log.info("Initial socketd established: " + targetHostPort.toString());
             if(initConnection(s)) {
             	connected = true;
             	new Thread(this).start();
             }
         } catch (UnknownHostException e) {
-            System.out.println("Sock:" + e.getMessage());
+            log.warning("Sock:" + e.getMessage());
         } catch (EOFException e) {
-            System.out.println("EOF:" + e.getMessage());
+        	log.warning("EOF:" + e.getMessage());
         } catch (IOException e) {
-            System.out.println("IO:" + e.getMessage());
+        	log.warning("IO:" + e.getMessage() + targetHostPort.toString());
         }
-        
-//        if(tryOther) {
-//        	
-//        }
     }
 
     /**
@@ -79,13 +89,13 @@ public class Client implements Runnable {
         while (true) {
             String data = null;
             try {
-//                Thread.sleep(1000);
                 data = in.readLine();
                 if (data == null) {
-                	System.out.println("Connection closed by server: "+targetHostPort.toString());
+                	log.info("Connection closed by server: "+targetHostPort.toString());
                 	in.close();
                 	out.close();
                 	s.close();
+                	connected = false;
                 	return;
                 }
                 List<Document> responses = handler.handleMsg(data);
@@ -100,9 +110,15 @@ public class Client implements Runnable {
         }
     }
     
+    /**
+     * Validate whether the handshake response is valid or not
+     * @param proto the handshake response
+     * @return 1 the response is valid with a valid hostPort;
+     * 		   0 the response is a connection refused protocol;
+     *        -1 the response is invalid;
+     */
+	@SuppressWarnings("unused")
 	private int validateInitialProtocol(Document proto) {
-		
-		//This try-catch is too general because we don't know what happens when try to call get method to an empty JSON object
 		try {
 			//The name of command written in the validating protocol
 			String commandField = proto.getString("command");
@@ -113,12 +129,6 @@ public class Client implements Runnable {
 					HostPort hpField = new HostPort((Document) proto.get("hostPort"));
 					return 1;
 				}else if(commandField.equals("CONNECTION_REFUSED")) {
-					/*Don't care about other fields in the protocol because the connection will soon ended
-					 * if the received peer list is invalid, just regard it as an invalid protocol, but the 
-					 * connection is ended so it doesn't matter.
-					 */
-//					tryOther = true;
-//					candidates = new ArrayList<Document>();
 					return 0;
 				}else {
 					return -1;
@@ -127,6 +137,7 @@ public class Client implements Runnable {
 				return -1;
 			}
 		} catch(Exception e) {
+			// Any exception happened during parsing the protocol will make this protocol invalid
 			return -1;
 		}
 	}
@@ -135,76 +146,79 @@ public class Client implements Runnable {
 	public Boolean initConnection(Socket client) {
 		
 		try {
-//			client = new Socket(targetHostPort.host, targetHostPort.port);
-//			System.out.println("Initial connection established with peer: " + targetHostPort.toString());
-			
-			System.out.println("Sending handshake request...");
-			
+			log.info("Sending handshake request...");
 			out.write(Protocol.createHandshakeRequestP(localHostPort));
 			out.flush();
 			
-			System.out.println("Waiting for handshake response...");
-			String s = in.readLine();
-			System.out.println(s);
-			Document receivedCommand = Document.parse(s);
+			String response = in.readLine();
+			log.info("Handshake response: " + response);
+			Document receivedCommand = Document.parse(response);
 			switch(validateInitialProtocol(receivedCommand)) {
 				case -1:
-					System.out.println("Received invalid protocol");
+					log.info("Received invalid protocol");
 					out.write(Protocol.createInvalidP("Invalid Message"));
 					out.flush();
 					client.close();
 					return false;
 				case 0:
-					System.out.println("The remote peer is already full, try other peers that provided by the remote one");
+					log.info("The remote peer is already full, try other peers that provided by the remote one");
 					client.close();
 					
 					return connectOtherPeers((ArrayList<Document>) receivedCommand.get("peers"));
 				case 1:
-					System.out.println("Handshake request granted!");
-//					processMsg();
+					log.info("Successfully connected with peer: " + targetHostPort.toString());
+					// Send syncEvents to server peer when connection established
+					broadcastSyncEvent();
 					return true;
 			}
 			
 		} catch (UnknownHostException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			log.warning(e.getMessage());
 			return false;
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			System.out.println("Connection failed with remote peer: " + targetHostPort.toString());
+			log.warning("Connection failed with remote peer: " + targetHostPort.toString());
 			return false;
 		}
-		
 		return false;
 	}
 	
+	/**
+	 * The method used to connect with other provided peers when a connection request is refused. This method may
+	 * be recursively called if some of the the provided peers are full as well. The main algorithm of trying to
+	 * connect with other peers follows the breadth first search principle.
+	 * @param peers a list of peer candidates provided by previous full peer
+	 * @return True if one connection is granted; otherwise false
+	 */
 	public Boolean connectOtherPeers(ArrayList<Document> peers) {
 		if(peers.size() == 0) {
-			System.out.println("Recieved empty peer list");
+			log.info("Recieved empty peer list");
 			return false;
 		}
 		
 		for(Document peer : peers) {
 			targetHostPort = new HostPort(peer);
 			try {
-				System.out.println("Now trying other peers");
+				log.info("Now trying other peers");
 				s = new Socket(targetHostPort.host, targetHostPort.port);
-				System.out.println("Initial socket established: "+targetHostPort.toString());
+				log.info("Initial socket established: "+targetHostPort.toString());
 				in = new BufferedReader(new InputStreamReader(s.getInputStream(), "UTF-8"));
 				out = new BufferedWriter(new OutputStreamWriter(s.getOutputStream(), "UTF-8"));
 				
 				return initConnection(s);
-				
 			} catch (UnknownHostException e) {
-				// TODO Auto-generated catch block
-				System.out.println("Invalid hostPort: "+targetHostPort.toString()+"///"+e.getMessage());
+				log.warning("Invalid hostPort: "+targetHostPort.toString()+"///"+e.getMessage());
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				System.out.println("Failed to create socket: "+targetHostPort.toString()+"///"+e.getMessage());
+				log.warning("Failed to create socket: "+targetHostPort.toString()+"///"+e.getMessage());
 			}
-			
 		}
+		
 		return false;
 	}
 
+	private void broadcastSyncEvent() {
+		log.info("Sending synchronize event to server peer");
+		for(FileSystemEvent event : handler.fileSystemManager.generateSyncEvents()) {
+			sendToServer(handler.toJson(event));
+		}
+    }
 }

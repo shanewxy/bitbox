@@ -4,12 +4,9 @@ import java.util.ArrayList;
 
 import unimelb.bitbox.util.Document;
 import unimelb.bitbox.util.HostPort;
-import unimelb.bitbox.util.FileSystemManager.FileSystemEvent;
 /**
- * This class contains templates of all essential protocols that used in the entire peers network.
- * Each type of protocol is a string in the format of JSON.
+ * This class contains generating methods for protocols used in handshake phase
  * @author Kiwilyc
- *
  */
 public class Protocol {
 	

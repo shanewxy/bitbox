@@ -3,22 +3,30 @@ package unimelb.bitbox;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Logger;
 import unimelb.bitbox.util.Configuration;
-import unimelb.bitbox.util.FileSystemManager;
 import unimelb.bitbox.util.HostPort;
 
+/**
+ * The component aims to manage incoming remote peers connections,
+ * the main communication procedure locates in the connection class {@link #connection(Socket, MessageHandler)}
+ * @author Xueying Wang
+ * @author Yichen Liu
+ */
 public class Server {
-
-
+	
+	/**
+	 * Using AtomicInteger to make a thread safe counter for connected peers
+	 */
     public static AtomicInteger clientCount;
     private static Logger log = Logger.getLogger(Server.class.getName());
-    private ServerSocket sock;
+    private ServerSocket ss;
 
+    /* Used a normal HashMap rather than ConcurrentHashMap because each connection object (the key in the map)
+     * is distinct so it will not cause infinite-recursion when multiple threads manipulate the same HashMap
+     */
     public static HashMap<Connection, HostPort> connections = new HashMap<Connection, HostPort>();
     
 	public static int maximumConnections = Integer.parseInt(Configuration.getConfigurationValue("maximumIncommingConnections"));
@@ -27,29 +35,33 @@ public class Server {
 	
 	public Server(int port, MessageHandler handler) {
         try {
-            sock = new ServerSocket(port);
+            ss = new ServerSocket(port);
             clientCount = new AtomicInteger();
         } catch (IOException e) {
             e.printStackTrace();
         }
+        // Create a thread for waiting incoming connections so the server will not block the main process in ServerMain
         Runnable listener = () -> {
             try {
                 while (true) {
-                    Socket socket = sock.accept();
+                    Socket socket = ss.accept();
                     Connection conn = new Connection(socket, handler);
                     conn.start();
-//                    connections.add(conn);
                 }
             } catch (IOException e) {
-                System.err.println(e);
+                log.warning(e.getMessage());
             }
         };
         new Thread(listener).start();
     }
 
     public void sendToClients(String msg) {
-
+    	// Make sure the disconnection of some clients will not interfere broadcasting messages
     	synchronized(connections) {
+    		if(connections.isEmpty()) {
+    			log.warning("This peer currently does not have any client");
+    			return;
+    		}
             for (Connection connection : connections.keySet()) {
                 try {
                     connection.out.write(msg+System.lineSeparator());

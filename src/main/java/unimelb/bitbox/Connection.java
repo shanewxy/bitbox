@@ -2,8 +2,6 @@ package unimelb.bitbox;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -11,12 +9,20 @@ import java.io.OutputStreamWriter;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Logger;
 
 import unimelb.bitbox.util.Document;
 import unimelb.bitbox.util.FileSystemManager;
+import unimelb.bitbox.util.FileSystemManager.FileSystemEvent;
 import unimelb.bitbox.util.HostPort;
 import unimelb.bitbox.util.Protocol;
 
+/**
+ * The main class of handling communications between the local peers and its client peers.
+ * A connection object will be created as a thread for each incoming peer connection.
+ * @author Xueying Wang
+ * @author Yichen Liu
+ */
 public class Connection extends Thread {
     BufferedReader in;
     BufferedWriter out;
@@ -24,6 +30,8 @@ public class Connection extends Thread {
     private MessageHandler handler;
     
     private HostPort clientHostPort;
+    
+    private static Logger log = Logger.getLogger(MessageHandler.class.getName());
 
     public Connection(Socket socket, MessageHandler handler) {
         this.socket = socket;
@@ -40,6 +48,7 @@ public class Connection extends Thread {
 			Document handshake = Document.parse(in.readLine());
 			System.out.println(handshake.toJson());
 			HostPort hp = null;
+			// Validate the content of this request, send invalid protocol when anything is invalid
 			if(handshake.getString("command").equals("HANDSHAKE_REQUEST")) {
 				try {
 					//Will throw a ClassCastException here if the port field is not a integer
@@ -49,9 +58,11 @@ public class Connection extends Thread {
 							Server.clientCount.getAndIncrement();
 							out.write(Protocol.createHandshakeResponseP(Server.localHostPort));
 							out.flush();
-							handler.fileSystemManager.generateSyncEvents();
 							Server.connections.put(this, clientHostPort);
-							System.out.println("Now we have:"+Server.clientCount.get());
+							// Send sync events to the new client peer when connection established
+							for(FileSystemEvent event : handler.fileSystemManager.generateSyncEvents()) {
+								out.write(handler.toJson(event));
+							}
 						}else {
 							out.write(Protocol.createConnectionRefusedP(new ArrayList<HostPort>(Server.connections.values())));
 							out.flush();
@@ -82,14 +93,14 @@ public class Connection extends Thread {
 				return;
 			}
 
+			// The main message handling process
 	        while (true) {
 	            String msg = in.readLine();
 	            if(msg == null) {
-					System.out.println("Connection closed remotely ");
+					log.warning("Connection closed remotely ");
 					socket.close();
 					Server.clientCount.decrementAndGet();
 					Server.connections.remove(this);
-					System.out.println("Now we only have: "+Server.clientCount.get());
 					return;
 				}
 	            List<Document> responses = handler.handleMsg(msg);
@@ -102,7 +113,7 @@ public class Connection extends Thread {
 	        }
 	        
 		} catch (EOFException e) {
-			System.out.println("Connection closed");
+			log.warning("Connection closed");
 		} catch (IOException e) {
 			e.printStackTrace();
 		}

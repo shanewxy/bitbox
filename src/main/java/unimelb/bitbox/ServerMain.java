@@ -5,7 +5,6 @@ import java.security.NoSuchAlgorithmException;
 import java.util.logging.Logger;
 
 import unimelb.bitbox.util.Configuration;
-import unimelb.bitbox.util.Document;
 import unimelb.bitbox.util.FileSystemManager;
 import unimelb.bitbox.util.FileSystemObserver;
 import unimelb.bitbox.util.FileSystemManager.FileSystemEvent;
@@ -14,6 +13,7 @@ public class ServerMain implements FileSystemObserver {
     private static Logger log = Logger.getLogger(ServerMain.class.getName());
     private static final int PORT = Integer.parseInt(Configuration.getConfigurationValue("port"));
     private static final String[] PEERS = Configuration.getConfigurationValue("peers").split(",");
+    private static final int SYNCINTERVAL = Integer.parseInt(Configuration.getConfigurationValue("syncInterval"));
 
     protected FileSystemManager fileSystemManager;
     private Client client;
@@ -30,6 +30,7 @@ public class ServerMain implements FileSystemObserver {
             	break;
             }
         }
+        new Thread(() -> broadcastSyncEvent()).start();
     }
 
     @Override
@@ -42,6 +43,26 @@ public class ServerMain implements FileSystemObserver {
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+    
+    /**
+     * After each sync interval, broadcast local share directory's content to other connected peers
+     */
+    private void broadcastSyncEvent() {
+    	while(true) {
+    		try {
+				Thread.sleep(1000*SYNCINTERVAL);
+				if(server == null) {
+					continue;
+				}
+    			log.info("Synchronizing...");
+				for(FileSystemEvent event : fileSystemManager.generateSyncEvents()) {
+					processFileSystemEvent(event);
+				}
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+    	}
     }
 
 }
