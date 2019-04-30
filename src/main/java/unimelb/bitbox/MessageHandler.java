@@ -13,6 +13,12 @@ import unimelb.bitbox.util.Document;
 import unimelb.bitbox.util.FileSystemManager;
 import unimelb.bitbox.util.FileSystemManager.FileSystemEvent;
 
+/**
+ * Contains methods to handle incoming messages for file system events. Pass
+ * received json to {@link #handleMsg(String)}, process the event and return
+ * result to the event sender.
+ *
+ */
 public class MessageHandler {
 
     private static final Long BLOCKSIZE = Long.parseLong(Configuration.getConfigurationValue("blockSize"));
@@ -26,7 +32,12 @@ public class MessageHandler {
     }
 
     /**
-     * handle incoming message
+     * handle incoming messages, unmarshall json string and call different methods
+     * according to command
+     * 
+     * @param msg
+     * @return response and bytes request when modify, response only for other
+     *         command
      */
     public List<Document> handleMsg(String msg) {
         System.out.println(msg);
@@ -53,10 +64,10 @@ public class MessageHandler {
             responses = handleFileModifyRequest(json);
             break;
         case "DIRECTORY_CREATE_REQUEST":
-            responses=handleDirCreateRequest(json);
+            responses = handleDirCreateRequest(json);
             break;
         case "DIRECTORY_DELETE_REQUEST":
-        	responses=handleDirDeleteRequest(json);
+            responses = handleDirDeleteRequest(json);
             break;
         case "DIRECTORY_CREATE_RESPONSE":
             log.info("message :" + json.getString("message") + " status : " + json.getBoolean("status"));
@@ -114,6 +125,12 @@ public class MessageHandler {
         return json;
     }
 
+    /**
+     * handle file modify request
+     * 
+     * @param json
+     * @return file modify response and file bytes request
+     */
     private List<Document> handleFileModifyRequest(Document json) {
         List<Document> responses = new ArrayList();
         String message = "";
@@ -169,13 +186,13 @@ public class MessageHandler {
         responses.add(json1);
         return responses;
     }
-    
-  //handle DIRECTORY_CREATE_RESPONSE
-    
+
+    // handle DIRECTORY_CREATE_RESPONSE
+
     private List<Document> handleDirCreateRequest(Document json) {
-    	List<Document> responses = new ArrayList();
-    	String pathName = json.getString("pathName");
-    	Document DirCResp = new Document();
+        List<Document> responses = new ArrayList();
+        String pathName = json.getString("pathName");
+        Document DirCResp = new Document();
         DirCResp.append("command", "DIRECTORY_CREATE_RESPONSE");
         DirCResp.append("pathName", pathName);
         try {
@@ -199,15 +216,15 @@ public class MessageHandler {
             DirCResp.append("status", false);
         }
         responses.add(DirCResp);
-    	return responses;
+        return responses;
     }
-    
-    //handle DIRECTORY_DELETE_RESPONSE
-    
+
+    // handle DIRECTORY_DELETE_RESPONSE
+
     private List<Document> handleDirDeleteRequest(Document json) {
-    	List<Document> responses = new ArrayList();
-    	String pathName = json.getString("pathName");
-    	Document DirDResp = new Document();
+        List<Document> responses = new ArrayList();
+        String pathName = json.getString("pathName");
+        Document DirDResp = new Document();
         DirDResp.append("command", "DIRECTORY_DELETE_RESPONSE");
         DirDResp.append("pathName", pathName);
         try {
@@ -230,10 +247,8 @@ public class MessageHandler {
             DirDResp.append("status", false);
         }
         responses.add(DirDResp);
-    	return responses;
+        return responses;
     }
-    
-    
 
     /**
      * parse event to Json

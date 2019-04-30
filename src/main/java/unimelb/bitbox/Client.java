@@ -168,7 +168,6 @@ public class Client implements Runnable {
 				case 1:
 					log.info("Successfully connected with peer: " + targetHostPort.toString());
 					// Send syncEvents to server peer when connection established
-					broadcastSyncEvent();
 					return true;
 			}
 			
@@ -215,10 +214,4 @@ public class Client implements Runnable {
 		return false;
 	}
 
-	private void broadcastSyncEvent() {
-		log.info("Sending synchronize event to server peer");
-		for(FileSystemEvent event : handler.fileSystemManager.generateSyncEvents()) {
-			sendToServer(handler.toJson(event));
-		}
-    }
-}
+	}

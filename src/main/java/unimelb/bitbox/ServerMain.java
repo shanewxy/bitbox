@@ -51,7 +51,6 @@ public class ServerMain implements FileSystemObserver {
     private void broadcastSyncEvent() {
     	while(true) {
     		try {
-				Thread.sleep(1000*SYNCINTERVAL);
 				if(server == null) {
 					continue;
 				}
@@ -59,6 +58,7 @@ public class ServerMain implements FileSystemObserver {
 				for(FileSystemEvent event : fileSystemManager.generateSyncEvents()) {
 					processFileSystemEvent(event);
 				}
+				Thread.sleep(1000*SYNCINTERVAL);
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 			}

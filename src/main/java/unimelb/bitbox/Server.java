@@ -59,7 +59,7 @@ public class Server {
     	// Make sure the disconnection of some clients will not interfere broadcasting messages
     	synchronized(connections) {
     		if(connections.isEmpty()) {
-    			log.warning("This peer currently does not have any client");
+//    			log.warning("This peer currently does not have any client");
     			return;
     		}
             for (Connection connection : connections.keySet()) {

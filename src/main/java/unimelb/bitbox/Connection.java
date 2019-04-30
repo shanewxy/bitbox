@@ -18,8 +18,10 @@ import unimelb.bitbox.util.HostPort;
 import unimelb.bitbox.util.Protocol;
 
 /**
- * The main class of handling communications between the local peers and its client peers.
- * A connection object will be created as a thread for each incoming peer connection.
+ * The main class of handling communications between the local peers and its
+ * client peers. A connection object will be created as a thread for each
+ * incoming peer connection.
+ * 
  * @author Xueying Wang
  * @author Yichen Liu
  */
@@ -28,9 +30,9 @@ public class Connection extends Thread {
     BufferedWriter out;
     protected Socket socket;
     private MessageHandler handler;
-    
+
     private HostPort clientHostPort;
-    
+
     private static Logger log = Logger.getLogger(MessageHandler.class.getName());
 
     public Connection(Socket socket, MessageHandler handler) {
@@ -42,81 +44,79 @@ public class Connection extends Thread {
 
     public void run() {
         try {
-			out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream(), "UTF-8"));
-			in = new BufferedReader(new InputStreamReader(socket.getInputStream(), "UTF-8"));
-			//The first protocol received from a new potential client should be a handshake request
-			Document handshake = Document.parse(in.readLine());
-			System.out.println(handshake.toJson());
-			HostPort hp = null;
-			// Validate the content of this request, send invalid protocol when anything is invalid
-			if(handshake.getString("command").equals("HANDSHAKE_REQUEST")) {
-				try {
-					//Will throw a ClassCastException here if the port field is not a integer
-					clientHostPort = new HostPort((Document) handshake.get("hostPort"));
-					if(clientHostPort.host != null) {
-						if(Server.clientCount.get() < Server.maximumConnections) {
-							Server.clientCount.getAndIncrement();
-							out.write(Protocol.createHandshakeResponseP(Server.localHostPort));
-							out.flush();
-							Server.connections.put(this, clientHostPort);
-							// Send sync events to the new client peer when connection established
-							for(FileSystemEvent event : handler.fileSystemManager.generateSyncEvents()) {
-								out.write(handler.toJson(event));
-							}
-						}else {
-							out.write(Protocol.createConnectionRefusedP(new ArrayList<HostPort>(Server.connections.values())));
-							out.flush();
-							socket.close();
-							return;
-						}
-					}else {
-						out.write(Protocol.createInvalidP("The host name should not be null!"));
-						out.flush();
-						socket.close();
-						return;
-					}
-				} catch (NullPointerException npe) {
-					out.write(Protocol.createInvalidP("Your handshake request should contain a hostPort field with not-null port and host!"));
-					out.flush();
-					socket.close();
-					return;
-				} catch (ClassCastException cce) {
-					out.write(Protocol.createInvalidP("The port number should be an integer!"));
-					out.flush();
-					socket.close();
-					return;
-				}
-			}else {
-				out.write(Protocol.createInvalidP("Your first message should be a handshake request rather than any other msg!"));
-				out.flush();
-				socket.close();
-				return;
-			}
+            out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream(), "UTF-8"));
+            in = new BufferedReader(new InputStreamReader(socket.getInputStream(), "UTF-8"));
+            // The first protocol received from a new potential client should be a handshake
+            // request
+            Document handshake = Document.parse(in.readLine());
+            System.out.println(handshake.toJson());
+            HostPort hp = null;
+            // Validate the content of this request, send invalid protocol when anything is
+            // invalid
+            if (handshake.getString("command").equals("HANDSHAKE_REQUEST")) {
+                try {
+                    // Will throw a ClassCastException here if the port field is not a integer
+                    clientHostPort = new HostPort((Document) handshake.get("hostPort"));
+                    if (clientHostPort.host != null) {
+                        if (Server.clientCount.get() < Server.maximumConnections) {
+                            Server.clientCount.getAndIncrement();
+                            out.write(Protocol.createHandshakeResponseP(Server.localHostPort));
+                            out.flush();
+                            Server.connections.put(this, clientHostPort);
+                        } else {
+                            out.write(Protocol.createConnectionRefusedP(new ArrayList<HostPort>(Server.connections.values())));
+                            out.flush();
+                            socket.close();
+                            return;
+                        }
+                    } else {
+                        out.write(Protocol.createInvalidP("The host name should not be null!"));
+                        out.flush();
+                        socket.close();
+                        return;
+                    }
+                } catch (NullPointerException npe) {
+                    out.write(Protocol.createInvalidP("Your handshake request should contain a hostPort field with not-null port and host!"));
+                    out.flush();
+                    socket.close();
+                    return;
+                } catch (ClassCastException cce) {
+                    out.write(Protocol.createInvalidP("The port number should be an integer!"));
+                    out.flush();
+                    socket.close();
+                    return;
+                }
+            } else {
+                out.write(Protocol.createInvalidP("Your first message should be a handshake request rather than any other msg!"));
+                out.flush();
+                socket.close();
+                return;
+            }
 
-			// The main message handling process
-	        while (true) {
-	            String msg = in.readLine();
-	            if(msg == null) {
-					log.warning("Connection closed remotely ");
-					socket.close();
-					Server.clientCount.decrementAndGet();
-					Server.connections.remove(this);
-					return;
-				}
-	            List<Document> responses = handler.handleMsg(msg);
-				if (responses != null) {
-					for (Document r : responses) {
-						out.write(r.toJson() + System.lineSeparator());
-						out.flush();
-					}
-				}
-	        }
-	        
-		} catch (EOFException e) {
-			log.warning("Connection closed");
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
+            // The main message handling process
+            while (true) {
+                String msg = in.readLine();
+                if (msg == null) {
+                    log.warning("Connection closed remotely ");
+                    socket.close();
+                    Server.clientCount.decrementAndGet();
+                    Server.connections.remove(this);
+                    return;
+                }
+                List<Document> responses = handler.handleMsg(msg);
+                if (responses != null) {
+                    for (Document r : responses) {
+                        out.write(r.toJson() + System.lineSeparator());
+                        out.flush();
+                    }
+                }
+            }
+
+        } catch (EOFException e) {
+            log.warning("Connection closed");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 
     }
 
