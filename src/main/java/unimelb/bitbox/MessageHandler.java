@@ -20,6 +20,10 @@ import unimelb.bitbox.util.FileSystemManager.FileSystemEvent;
  *
  */
 public class MessageHandler {
+    private enum Command {
+        INVALID_PROTOCOL, CONNECTION_REFUSED, HANDSHAKE_REQUEST, HANDSHAKE_RESPONSE, FILE_CREATE_REQUEST, FILE_CREATE_RESPONSE, FILE_DELETE_REQUEST, FILE_DELETE_RESPONSE, FILE_MODIFY_REQUEST,
+        FILE_MODIFY_RESPONSE, DIRECTORY_CREATE_REQUEST, DIRECTORY_CREATE_RESPONSE, DIRECTORY_DELETE_REQUEST, DIRECTORY_DELETE_RESPONSE, FILE_BYTES_REQUEST, FILE_BYTES_RESPONSE
+    }
 
     private static final Long BLOCKSIZE = Long.parseLong(Configuration.getConfigurationValue("blockSize"));
     private static Logger log = Logger.getLogger(MessageHandler.class.getName());
@@ -69,19 +73,9 @@ public class MessageHandler {
         case "DIRECTORY_DELETE_REQUEST":
             responses = handleDirDeleteRequest(json);
             break;
-        case "DIRECTORY_CREATE_RESPONSE":
-            log.info("message :" + json.getString("message") + " status : " + json.getBoolean("status"));
-            break;
-        case "DIRECTORY_DELETE_RESPONSE":
-            log.info("message :" + json.getString("message") + " status : " + json.getBoolean("status"));
-            break;
 
         case "FILE_CREATE_REQUEST":
             responses = handleFileCreateRequest(json);
-            break;
-
-        case "FILE_CREATE_RESPONSE":
-            log.info("message :" + json.getString("message") + " status : " + json.getBoolean("status"));
             break;
 
         case "FILE_BYTES_REQUEST":
@@ -251,32 +245,6 @@ public class MessageHandler {
     }
 
     /**
-     * parse event to Json
-     */
-    public String toJson(FileSystemEvent fileSystemEvent) {
-        Document message = new Document();
-        message.append("command", fileSystemEvent.event + "_REQUEST");
-        if (fileSystemEvent.fileDescriptor != null)
-            message.append("fileDescriptor", fileSystemEvent.fileDescriptor.toDoc());
-        message.append("pathName", fileSystemEvent.pathName);
-        return message.toJson();
-    }
-
-    /**
-     * append general info when creating response protocol
-     * 
-     * @param json
-     * @param cmd
-     * @param message
-     * @param status
-     */
-    public void appendResponseInfo(Document json, Command cmd, String message, boolean status) {
-        json.replace("command", cmd.toString());
-        json.append("message", message);
-        json.append("status", status);
-    }
-
-    /**
      * handle incoming File_Create_Request
      * 
      * @param msg
@@ -426,5 +394,34 @@ public class MessageHandler {
             e.printStackTrace();
         }
         return responses;
+    }
+
+    /**
+     * parse event to Json
+     * 
+     * @param fileSystemEvent
+     * @return json string of the event
+     */
+    public String toJson(FileSystemEvent fileSystemEvent) {
+        Document message = new Document();
+        message.append("command", fileSystemEvent.event + "_REQUEST");
+        if (fileSystemEvent.fileDescriptor != null)
+            message.append("fileDescriptor", fileSystemEvent.fileDescriptor.toDoc());
+        message.append("pathName", fileSystemEvent.pathName);
+        return message.toJson();
+    }
+
+    /**
+     * append general info when creating response protocol
+     * 
+     * @param json
+     * @param cmd
+     * @param message
+     * @param status
+     */
+    public void appendResponseInfo(Document json, Command cmd, String message, boolean status) {
+        json.replace("command", cmd.toString());
+        json.append("message", message);
+        json.append("status", status);
     }
 }
