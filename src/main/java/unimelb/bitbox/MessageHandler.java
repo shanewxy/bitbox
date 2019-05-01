@@ -264,7 +264,6 @@ public class MessageHandler {
 			message = "pathname already exists";
 		} else {
 			try {
-				fileSystemManager.cancelFileLoader(pathName);
 				if (fileSystemManager.createFileLoader(pathName, md5, fileSize, lastModified)) {
 
 					result = true;
