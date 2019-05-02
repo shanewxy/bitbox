@@ -41,7 +41,7 @@ public class ServerMain implements FileSystemObserver {
             	break;
             }
         }
-        new Thread(() -> broadcastSyncEvent()).start();
+//        new Thread(() -> broadcastSyncEvent()).start();
     }
 
     /**
@@ -89,21 +89,21 @@ public class ServerMain implements FileSystemObserver {
     /**
      * After each sync interval, broadcast local share directory's content to other connected peers
      */
-    private void broadcastSyncEvent() {
-    	while(true) {
-    		try {
-				if(server == null) {
-					continue;
-				}
-    			log.info("Synchronizing...");
-				for(FileSystemEvent event : fileSystemManager.generateSyncEvents()) {
-					processFileSystemEvent(event);
-				}
-				Thread.sleep(1000*SYNCINTERVAL);
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-			}
-    	}
-    }
+//    private void broadcastSyncEvent() {
+//    	while(true) {
+//    		try {
+//				if(server == null) {
+//					continue;
+//				}
+//    			log.info("Synchronizing...");
+//				for(FileSystemEvent event : fileSystemManager.generateSyncEvents()) {
+//					processFileSystemEvent(event);
+//				}
+//				Thread.sleep(1000*SYNCINTERVAL);
+//			} catch (InterruptedException e) {
+//				e.printStackTrace();
+//			}
+//    	}
+//    }
 
 }

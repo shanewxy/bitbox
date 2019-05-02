@@ -7,10 +7,12 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.Socket;
+import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
 
+import unimelb.bitbox.util.Configuration;
 import unimelb.bitbox.util.Document;
 import unimelb.bitbox.util.FileSystemManager;
 import unimelb.bitbox.util.FileSystemManager.FileSystemEvent;
@@ -26,6 +28,8 @@ import unimelb.bitbox.util.Protocol;
  * @author Yichen Liu
  */
 public class Connection extends Thread {
+    private static final int SYNCINTERVAL = Integer.parseInt(Configuration.getConfigurationValue("syncInterval"));
+
     BufferedReader in;
     BufferedWriter out;
     protected Socket socket;
@@ -63,6 +67,7 @@ public class Connection extends Thread {
                             out.write(Protocol.createHandshakeResponseP(Server.localHostPort));
                             out.flush();
                             Server.connections.put(this, clientHostPort);
+                            new Thread(() -> broadcastSyncEvent()).start();
                         } else {
                             out.write(Protocol.createConnectionRefusedP(new ArrayList<HostPort>(Server.connections.values())));
                             out.flush();
@@ -118,6 +123,26 @@ public class Connection extends Thread {
             e.printStackTrace();
         }
 
+    }
+
+    private void broadcastSyncEvent() {
+        while (true) {
+
+            log.info("Sending synchronize event to client peer");
+            for (FileSystemEvent event : handler.fileSystemManager.generateSyncEvents()) {
+                try {
+                    out.write(handler.toJson(event) + System.lineSeparator());
+                    out.flush();
+                } catch (IOException e) {
+                    log.warning(e.toString());
+                }
+            }
+            try {
+                Thread.sleep(1000 * SYNCINTERVAL);
+            } catch (InterruptedException e) {
+                log.warning(e.toString());
+            }
+        }
     }
 
 }
