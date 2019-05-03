@@ -172,7 +172,14 @@ public class MessageHandler {
         return responses;
     }
 
-    // handle DIRECTORY_CREATE_RESPONSE
+    /**
+     * this method is used to handle directory create request. When peer receives the
+     * "DIRECTORY_CREATE_REQUEST", system will check the pathname and  create this directory
+     * when everything works well. It will return a JSON for Directory create response.
+     * 
+     * @param JSON
+     * @return an ArrayList of Document objects
+     */
 
     private List<Document> handleDirCreateRequest(Document json) {
         List<Document> responses = new ArrayList();
@@ -204,7 +211,14 @@ public class MessageHandler {
         return responses;
     }
 
-    // handle DIRECTORY_DELETE_RESPONSE
+    /**
+     * this method is used to handle directory delete request. When peer receives the
+     * "DIRECTORY_DELETE_REQUEST", system will check the pathname and delete this directory
+     * when everything works well. It will return a JSON for Directory delete response.
+     * 
+     * @param JSON
+     * @return an ArrayList of Document objects
+     */
 
     private List<Document> handleDirDeleteRequest(Document json) {
         List<Document> responses = new ArrayList();
