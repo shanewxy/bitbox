@@ -134,13 +134,13 @@ public class Connection extends Thread {
                     out.write(handler.toJson(event) + System.lineSeparator());
                     out.flush();
                 } catch (IOException e) {
-                    log.warning(e.toString());
+                    log.warning(e.getMessage());
                 }
             }
             try {
                 Thread.sleep(1000 * SYNCINTERVAL);
             } catch (InterruptedException e) {
-                log.warning(e.toString());
+                log.warning(e.getMessage());
             }
         }
     }

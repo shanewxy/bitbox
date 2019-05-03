@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.Socket;
+import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
@@ -111,7 +112,11 @@ public class Client implements Runnable {
                         sendToServer(r.toJson());
                     }
                 }
-            } catch (IOException e) {
+            } catch(SocketException e) {
+                log.severe(e.getMessage());
+                break;
+            }
+            catch (IOException e) {
                 e.printStackTrace();
             }
         }
@@ -176,7 +181,7 @@ public class Client implements Runnable {
                 return connectOtherPeers((ArrayList<Document>) receivedCommand.get("peers"));
             case 1:
                 log.info("Successfully connected with peer: " + targetHostPort.toString());
-//                new Thread(() -> broadcastSyncEvent()).start();
+                new Thread(() -> broadcastSyncEvent()).start();
                 // Send syncEvents to server peer when connection established
                 return true;
             }
