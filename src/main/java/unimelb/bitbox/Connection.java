@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.Socket;
+import java.net.SocketException;
 import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
 import java.util.List;
@@ -34,10 +35,9 @@ public class Connection extends Thread {
     BufferedWriter out;
     protected Socket socket;
     private MessageHandler handler;
-
     private HostPort clientHostPort;
-
     private static Logger log = Logger.getLogger(MessageHandler.class.getName());
+    public boolean connected = false;
 
     public Connection(Socket socket, MessageHandler handler) {
         this.socket = socket;
@@ -67,6 +67,9 @@ public class Connection extends Thread {
                             out.write(Protocol.createHandshakeResponseP(Server.localHostPort));
                             out.flush();
                             Server.connections.put(this, clientHostPort);
+                            
+                            this.connected = true;
+                            
                             new Thread(() -> broadcastSyncEvent()).start();
                         } else {
                             out.write(Protocol.createConnectionRefusedP(new ArrayList<HostPort>(Server.connections.values())));
@@ -99,7 +102,7 @@ public class Connection extends Thread {
             }
 
             // The main message handling process
-            while (true) {
+            while (connected) {
                 String msg = in.readLine();
                 if (msg == null) {
                     log.warning("Connection closed remotely ");
@@ -120,28 +123,33 @@ public class Connection extends Thread {
         } catch (EOFException e) {
             log.warning("Connection closed");
         } catch (IOException e) {
-            e.printStackTrace();
+        	log.warning(e.getMessage());
         }
 
     }
 
     private void broadcastSyncEvent() {
-        while (true) {
-
-            log.info("Sending synchronize event to client peer");
-            for (FileSystemEvent event : handler.fileSystemManager.generateSyncEvents()) {
+        while (connected) {
+//        	if (connected) {
+        		log.info("Sending synchronize event to client peer");
+                for (FileSystemEvent event : handler.fileSystemManager.generateSyncEvents()) {
+                    try {
+                    	out.write(handler.toJson(event) + System.lineSeparator());
+                    	out.flush();
+                    }catch (SocketException e) {
+						this.connected = false;
+					}
+					catch (IOException e) {
+                        log.warning(e.getMessage());
+                    }
+                }
                 try {
-                    out.write(handler.toJson(event) + System.lineSeparator());
-                    out.flush();
-                } catch (IOException e) {
+                    Thread.sleep(1000 * SYNCINTERVAL);
+                } catch (InterruptedException e) {
                     log.warning(e.getMessage());
                 }
-            }
-            try {
-                Thread.sleep(1000 * SYNCINTERVAL);
-            } catch (InterruptedException e) {
-                log.warning(e.getMessage());
-            }
+//			}
+            
         }
     }
 

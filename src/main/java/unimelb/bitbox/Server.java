@@ -64,8 +64,8 @@ public class Server {
     		}
             for (Connection connection : connections.keySet()) {
                 try {
-                    connection.out.write(msg+System.lineSeparator());
-                    connection.out.flush();
+					connection.out.write(msg+System.lineSeparator());
+                	connection.out.flush();
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
