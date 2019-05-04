@@ -65,8 +65,11 @@ public class Server {
     		}
             for (Connection connection : connections.keySet()) {
                 try {
-					connection.out.write(msg+System.lineSeparator());
-                	connection.out.flush();
+                    synchronized(connection.out) {
+                        connection.out.write(msg+System.lineSeparator());
+                        connection.out.flush();
+                        
+                    }
                 } catch(SocketException e1) {
                     log.warning(e1.getMessage()+"hi aaron");
                 }
