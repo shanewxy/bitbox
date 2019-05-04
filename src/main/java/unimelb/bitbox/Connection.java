@@ -54,7 +54,7 @@ public class Connection extends Thread {
 			// a handshake
 			// request
 			Document handshake = Document.parse(in.readLine());
-			System.out.println(handshake.toJson());
+			log.info(handshake.toJson());
 			HostPort hp = null;
 			// Validate the content of this request, send invalid protocol when
 			// anything is
