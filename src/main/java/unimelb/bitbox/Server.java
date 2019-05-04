@@ -3,6 +3,7 @@ package unimelb.bitbox;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketException;
 import java.util.HashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Logger;
@@ -38,7 +39,7 @@ public class Server {
             ss = new ServerSocket(port);
             clientCount = new AtomicInteger();
         } catch (IOException e) {
-            e.printStackTrace();
+            log.warning(e.getMessage());
         }
         // Create a thread for waiting incoming connections so the server will not block the main process in ServerMain
         Runnable listener = () -> {
@@ -66,8 +67,11 @@ public class Server {
                 try {
 					connection.out.write(msg+System.lineSeparator());
                 	connection.out.flush();
-                } catch (IOException e) {
-                    e.printStackTrace();
+                } catch(SocketException e1) {
+                    log.warning(e1.getMessage()+"hi aaron");
+                }
+                catch (IOException e) {
+                    log.warning(e.getMessage());
                 }
             }
     	}

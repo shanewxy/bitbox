@@ -8,16 +8,14 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.Socket;
 import java.net.SocketException;
-import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
 
 import unimelb.bitbox.util.Configuration;
 import unimelb.bitbox.util.Document;
-import unimelb.bitbox.util.FileSystemManager;
 import unimelb.bitbox.util.FileSystemManager.FileSystemEvent;
-import unimelb.bitbox.util.HostPort;
+import unimelb.bitbox.util.HostPort;        
 import unimelb.bitbox.util.Protocol;
 
 /**
@@ -139,12 +137,10 @@ public class Connection extends Thread {
 
 	private void broadcastSyncEvent() {
 		while (connected) {
-			// if (connected) {
 			log.info("Sending synchronize event to client peer");
 			for (FileSystemEvent event : handler.fileSystemManager.generateSyncEvents()) {
 				try {
 					synchronized (out) {
-
 						out.write(handler.toJson(event) + System.lineSeparator());
 						out.flush();
 					}
@@ -159,8 +155,6 @@ public class Connection extends Thread {
 			} catch (InterruptedException e) {
 				log.warning(e.getMessage());
 			}
-			// }
-
 		}
 	}
 

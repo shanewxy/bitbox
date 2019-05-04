@@ -164,7 +164,7 @@ public class MessageHandler {
                 message = "file loader already exists";
 
             } catch (NoSuchAlgorithmException e) {
-                e.printStackTrace();
+                log.warning(e.getMessage());
             }
         }
         appendResponseInfo(json1, Command.FILE_MODIFY_RESPONSE, message, status);
@@ -306,7 +306,7 @@ public class MessageHandler {
                     message = "there was a problem creating the file";
                 }
             } catch (NoSuchAlgorithmException e) {
-                e.printStackTrace();
+                log.warning(e.getMessage());
             } catch (IOException e) {
                 message = "file loader already exists";
             }
@@ -413,9 +413,9 @@ public class MessageHandler {
 
             }
         } catch (NoSuchAlgorithmException e) {
-            e.printStackTrace();
+            log.warning(e.getMessage());
         } catch (IOException e) {
-            e.printStackTrace();
+            log.warning(e.getMessage());
         }
         return responses;
     }

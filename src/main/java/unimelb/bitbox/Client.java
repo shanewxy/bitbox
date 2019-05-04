@@ -98,7 +98,7 @@ public class Client implements Runnable {
 		} catch (SocketException e) {
 			connected = false;
 		}catch (IOException e) {
-			e.printStackTrace();
+		    log.warning(e.getMessage());
 		}
 	}
 
@@ -126,7 +126,7 @@ public class Client implements Runnable {
 				log.severe(e.getMessage());
 				break;
 			} catch (IOException e) {
-				e.printStackTrace();
+			    log.warning(e.getMessage());
 			}
 		}
 	}
@@ -244,7 +244,6 @@ public class Client implements Runnable {
 
 	private void broadcastSyncEvent() {
 		while (connected) {
-//			if (connected) {
 				log.info("Sending synchronize event to server peer");
 				for (FileSystemEvent event : handler.fileSystemManager.generateSyncEvents()) {
 					sendToServer(handler.toJson(event));
@@ -254,7 +253,6 @@ public class Client implements Runnable {
 				} catch (InterruptedException e) {
 					log.warning(e.getMessage());
 				}
-//			}
 		}
 	}
 }
