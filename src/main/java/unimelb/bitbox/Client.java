@@ -89,8 +89,11 @@ public class Client implements Runnable {
 	public void sendToServer(String msg) {
 		try {
 			if (connected) {
-				out.write(msg + System.lineSeparator());
-				out.flush();
+				synchronized (out) {
+					out.write(msg + System.lineSeparator());
+					out.flush();
+				}
+				
 			}
 		} catch (SocketException e) {
 			connected = false;
