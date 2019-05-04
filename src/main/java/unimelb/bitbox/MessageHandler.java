@@ -372,6 +372,11 @@ public class MessageHandler {
      */
     private ArrayList<Document> handleFileBytesResponse(Document json) {
         ArrayList<Document> responses = new ArrayList<Document>();
+        boolean status = json.getBoolean("status");
+        if (!status) {
+			return responses;
+		}
+        
         String content = json.getString("content");
         long position = json.getLong("position");
         String pathName = json.getString("pathName");
