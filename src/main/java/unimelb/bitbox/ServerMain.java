@@ -41,7 +41,6 @@ public class ServerMain implements FileSystemObserver {
             	break;
             }
         }
-//        new Thread(() -> broadcastSyncEvent()).start();
     }
 
     /**

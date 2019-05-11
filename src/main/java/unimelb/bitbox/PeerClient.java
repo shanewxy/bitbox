@@ -30,7 +30,7 @@ public class PeerClient implements Runnable {
 	private static final int SYNCINTERVAL = Integer.parseInt(Configuration.getConfigurationValue("syncInterval"));
 
 	BufferedReader in;
-	volatile BufferedWriter out;
+	BufferedWriter out;
 	public boolean connected = false;
 	private Socket s;
 
