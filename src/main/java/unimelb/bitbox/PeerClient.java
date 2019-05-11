@@ -26,7 +26,7 @@ import unimelb.bitbox.util.FileSystemManager.FileSystemEvent;
  * @author Xueying Wang
  * @author Yichen Liu
  */
-public class Client implements Runnable {
+public class PeerClient implements Runnable {
 	private static final int SYNCINTERVAL = Integer.parseInt(Configuration.getConfigurationValue("syncInterval"));
 
 	BufferedReader in;
@@ -60,7 +60,7 @@ public class Client implements Runnable {
 	 * @param handler
 	 *            the message handler object
 	 */
-	public Client(String peer, MessageHandler handler) {
+	public PeerClient(String peer, MessageHandler handler) {
 		this.handler = handler;
 		targetHostPort = new HostPort(peer);
 

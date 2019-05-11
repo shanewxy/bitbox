@@ -63,18 +63,18 @@ public class Connection extends Thread {
 					// not a integer
 					clientHostPort = new HostPort((Document) handshake.get("hostPort"));
 					if (clientHostPort.host != null) {
-						if (Server.clientCount.get() < Server.maximumConnections) {
-							Server.clientCount.getAndIncrement();
-							out.write(Protocol.createHandshakeResponseP(Server.localHostPort));
+						if (PeerServer.clientCount.get() < PeerServer.maximumConnections) {
+							PeerServer.clientCount.getAndIncrement();
+							out.write(Protocol.createHandshakeResponseP(PeerServer.localHostPort));
 							out.flush();
-							Server.connections.put(this, clientHostPort);
+							PeerServer.connections.put(this, clientHostPort);
 
 							this.connected = true;
 
 							new Thread(() -> broadcastSyncEvent()).start();
 						} else {
 							out.write(Protocol
-									.createConnectionRefusedP(new ArrayList<HostPort>(Server.connections.values())));
+									.createConnectionRefusedP(new ArrayList<HostPort>(PeerServer.connections.values())));
 							out.flush();
 							socket.close();
 							return;
@@ -111,8 +111,8 @@ public class Connection extends Thread {
 				if (msg == null) {
 					log.warning("Connection closed remotely ");
 					socket.close();
-					Server.clientCount.decrementAndGet();
-					Server.connections.remove(this);
+					PeerServer.clientCount.decrementAndGet();
+					PeerServer.connections.remove(this);
 					return;
 				}
 				List<Document> responses = handler.handleMsg(msg);
