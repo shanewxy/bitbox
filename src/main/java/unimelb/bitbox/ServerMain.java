@@ -21,8 +21,8 @@ public class ServerMain implements FileSystemObserver {
     private List<File> list;
 
     protected FileSystemManager fileSystemManager;
-    private Client client;
-    private Server server;
+    private PeerClient peerClient;
+    private PeerServer peerServer;
     private MessageHandler handler;
 
     public ServerMain() throws NumberFormatException, IOException, NoSuchAlgorithmException {
@@ -34,14 +34,14 @@ public class ServerMain implements FileSystemObserver {
     	cancelExistFileLoader(PATH);
         
         handler = new MessageHandler(fileSystemManager);
-        server = new Server(PORT, handler);
+        peerServer = new PeerServer(PORT, handler);
         for(String peer : PEERS) {
-            client = new Client(peer, handler);
-            if(client.connected) {
+            peerClient = new PeerClient(peer, handler);
+            if(peerClient.connected) {
             	break;
             }
         }
-        new Thread(() -> broadcastSyncEvent()).start();
+//        new Thread(() -> broadcastSyncEvent()).start();
     }
 
     /**
@@ -78,32 +78,14 @@ public class ServerMain implements FileSystemObserver {
     public void processFileSystemEvent(FileSystemEvent fileSystemEvent) {
         String msg = handler.toJson(fileSystemEvent);
         try {
-            if (client != null && client.connected)
-                client.sendToServer(msg);
-            server.sendToClients(msg);
+            if (peerClient != null && peerClient.connected)
+                peerClient.sendToServer(msg);
+            peerServer.sendToClients(msg);
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
     
-    /**
-     * After each sync interval, broadcast local share directory's content to other connected peers
-     */
-    private void broadcastSyncEvent() {
-    	while(true) {
-    		try {
-				if(server == null) {
-					continue;
-				}
-    			log.info("Synchronizing...");
-				for(FileSystemEvent event : fileSystemManager.generateSyncEvents()) {
-					processFileSystemEvent(event);
-				}
-				Thread.sleep(1000*SYNCINTERVAL);
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-			}
-    	}
-    }
+  
 
 }
