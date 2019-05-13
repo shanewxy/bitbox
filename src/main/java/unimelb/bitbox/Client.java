@@ -2,23 +2,44 @@ package unimelb.bitbox;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
-import java.io.FileInputStream;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
+import java.io.UnsupportedEncodingException;
 import java.net.Socket;
 import java.net.UnknownHostException;
-import java.util.Properties;
+import java.security.InvalidKeyException;
+import java.security.KeyFactory;
+import java.security.KeyPair;
+import java.security.NoSuchAlgorithmException;
+import java.security.PrivateKey;
+import java.security.Security;
+import java.util.Base64;
+import java.util.Base64.Decoder;
+import java.util.Base64.Encoder;
+
+import javax.crypto.BadPaddingException;
+import javax.crypto.Cipher;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
+import javax.crypto.spec.SecretKeySpec;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
+import org.bouncycastle.openssl.PEMKeyPair;
+import org.bouncycastle.openssl.PEMParser;
+import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter;
 
+import unimelb.bitbox.util.Document;
 import unimelb.bitbox.util.HostPort;
 import unimelb.bitbox.util.Protocol;
+import unimelb.bitbox.util.SecurityUtil;
 
 /**
  * @author: Xueying Wang
@@ -28,6 +49,7 @@ public class Client {
     BufferedWriter out;
     protected Socket socket;
     private static final String RSA_FILE = "bitboxclient_rsa";
+    private static SecretKeySpec secretKey;
 //    static {
 //        try (InputStream inputStream = new FileInputStream(RSA_FLIE)) {
 //            inputStream.read
@@ -42,18 +64,26 @@ public class Client {
         options.addOption("c", true, "command");
         options.addOption("s", true, "the server's address and port number");
         options.addOption("i", true, "identity of the client");
+        options.addOption("p", true, "peer address and port number");
         CommandLineParser parser = new DefaultParser();
         try {
             CommandLine cmd = parser.parse(options, args);
             String server = cmd.getOptionValue('s');
             String command = cmd.getOptionValue('c');
             String identity = cmd.getOptionValue('i');
+            String peer = cmd.getOptionValue('p');
             HostPort hostport = new HostPort(server);
             client.initConnection(hostport, identity);
-            if (cmd.hasOption('p')) {
-            }
+            client.out.write(generateRequest(command, peer));
+            client.out.flush();
+            System.out.println(client.in.readLine());
+//            if (cmd.hasOption('p')) {
+//                String 
+//            }
         } catch (ParseException e) {
-            // TODO Auto-generated catch block
+
+            e.printStackTrace();
+        } catch (IOException e) {
             e.printStackTrace();
         }
     }
@@ -65,14 +95,98 @@ public class Client {
             out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream(), "UTF-8"));
             out.write(Protocol.CreateAuthRequest(identity));
             out.flush();
-            String secretKey=in.readLine();
+            String secretKey = in.readLine();
             System.out.println(secretKey);
+            getSecretKey(secretKey);
         } catch (UnknownHostException e) {
-            // TODO Auto-generated catch block
+
             e.printStackTrace();
         } catch (IOException e) {
-            // TODO Auto-generated catch block
+
             e.printStackTrace();
         }
     }
+
+    /**
+     * extract the secret key from message received from server, and store it into
+     * the variable.
+     * 
+     * @param json from server
+     */
+    private void getSecretKey(String json) {
+        Document msg = Document.parse(json);
+        String encoded = msg.getString("AES128");
+        Decoder decoder = Base64.getDecoder();
+        byte[] encrypted = decoder.decode(encoded);
+        PrivateKey privateKey = readPrivateKey("bitboxclient_rsa");
+        try {
+            Cipher cipher = Cipher.getInstance("RSA");
+            cipher.init(Cipher.DECRYPT_MODE, privateKey);
+            secretKey = new SecretKeySpec(cipher.doFinal(encrypted), "AES");
+        } catch (IllegalBlockSizeException e) {
+
+            e.printStackTrace();
+        } catch (BadPaddingException e) {
+
+            e.printStackTrace();
+        } catch (NoSuchAlgorithmException e) {
+
+            e.printStackTrace();
+        } catch (NoSuchPaddingException e) {
+
+            e.printStackTrace();
+        } catch (InvalidKeyException e) {
+
+            e.printStackTrace();
+        }
+
+    }
+
+    private PrivateKey readPrivateKey(String privateKeyFileName) {
+        Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
+        File privateKeyFile = new File(privateKeyFileName); // private key file in PEM format
+        PEMParser pemParser;
+        KeyPair kp = null;
+        try {
+//            PemReader l=new PemReader(new FileReader(privateKeyFile));
+            pemParser = new PEMParser(new FileReader(privateKeyFile));
+            Object object = pemParser.readObject();
+            JcaPEMKeyConverter converter = new JcaPEMKeyConverter().setProvider("BC");
+            System.out.println("Unencrypted key - no password needed");
+            kp = converter.getKeyPair((PEMKeyPair) object);
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+
+            e.printStackTrace();
+        }
+        return kp.getPrivate();
+
+    }
+
+    public static String generateRequest(String command, String peer) {
+        Document json = new Document();
+        String cmd = null;
+        switch (command) {
+        case "list_peers":
+            cmd = "LIST_PEERS_REQUEST";
+            break;
+        case "connect_peer":
+            cmd = "CONNECT_PEER_REQUEST";
+            HostPort hp = new HostPort(peer);
+            json.append("host", hp.host);
+            json.append("port", hp.port);
+            break;
+        case "disconnect_peer":
+            cmd = "DISCONNECT_PEER_REQUEST";
+            HostPort h = new HostPort(peer);
+            json.append("host", h.host);
+            json.append("port", h.port);
+            break;
+        }
+        json.append("command", cmd);
+        return SecurityUtil.encrypt(json.toJson(),secretKey) + System.lineSeparator();
+    }
+
+    
 }

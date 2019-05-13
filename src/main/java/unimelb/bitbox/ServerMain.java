@@ -26,54 +26,58 @@ public class ServerMain implements FileSystemObserver {
     private MessageHandler handler;
 
     public ServerMain() throws NumberFormatException, IOException, NoSuchAlgorithmException {
-    	
-    	fileSystemManager = new FileSystemManager(PATH, this);
-    	
-    	// delete existing fileLoader
-    	list = new ArrayList<File>();  
-    	cancelExistFileLoader(PATH);
-        
+
+        fileSystemManager = new FileSystemManager(PATH, this);
+
+        // delete existing fileLoader
+        list = new ArrayList<File>();
+        cancelExistFileLoader(PATH);
+
         handler = new MessageHandler(fileSystemManager);
         peerServer = new PeerServer(PORT, handler);
-        for(String peer : PEERS) {
+        for (String peer : PEERS) {
             peerClient = new PeerClient(peer, handler);
-            if(peerClient.connected) {
-            	break;
+            if (peerClient.connected) {
+                break;
+            }
+        }
+        new Server(handler);
+
+    }
+
+    /**
+     * delete exist FileLoader if there is any
+     * 
+     * @param path
+     */
+    public void cancelExistFileLoader(String path) {
+        readAllFile(PATH);
+        for (File file : list) {
+            String fileName = file.getName();
+            if (fileName.endsWith("(bitbox)")) {
+                file.delete();
             }
         }
     }
 
     /**
-     * delete exist FileLoader if there is any
-     * @param path
-     */
-    public void cancelExistFileLoader(String path) {
-    	readAllFile(PATH);
-		for (File file : list) {
-			String fileName = file.getName();
-			if (fileName.endsWith("(bitbox)")) {
-				file.delete();
-			}
-		}
-	}
-    
-    /**
      * read all files under the given directory
+     * 
      * @param filePath
      */
-    public void readAllFile(String filePath) {  
-        File f = new File(filePath);  
-        File[] files = f.listFiles();  
-        for (File file : files) {  
-            if(file.isDirectory()) {  
-                readAllFile(file.getPath());  
-            } else {  
-                this.list.add(file);  
-            }  
-        }  
-    }  
+    public void readAllFile(String filePath) {
+        File f = new File(filePath);
+        File[] files = f.listFiles();
+        for (File file : files) {
+            if (file.isDirectory()) {
+                readAllFile(file.getPath());
+            } else {
+                this.list.add(file);
+            }
+        }
+    }
 
-	@Override
+    @Override
     public void processFileSystemEvent(FileSystemEvent fileSystemEvent) {
         String msg = handler.toJson(fileSystemEvent);
         try {
@@ -84,7 +88,5 @@ public class ServerMain implements FileSystemObserver {
             e.printStackTrace();
         }
     }
-    
-  
 
 }
