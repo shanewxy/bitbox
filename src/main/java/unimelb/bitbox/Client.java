@@ -8,18 +8,15 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
-import java.io.UnsupportedEncodingException;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.security.InvalidKeyException;
-import java.security.KeyFactory;
 import java.security.KeyPair;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.Security;
 import java.util.Base64;
 import java.util.Base64.Decoder;
-import java.util.Base64.Encoder;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
@@ -50,13 +47,6 @@ public class Client {
     protected Socket socket;
     private static final String RSA_FILE = "bitboxclient_rsa";
     private static SecretKeySpec secretKey;
-//    static {
-//        try (InputStream inputStream = new FileInputStream(RSA_FLIE)) {
-//            inputStream.read
-//        } catch (IOException e) {
-//            log.warning("Could not read file " + rsaFile);
-//        }
-//    }
 
     public static void main(String[] args) {
         Client client = new Client();
@@ -76,10 +66,8 @@ public class Client {
             client.initConnection(hostport, identity);
             client.out.write(generateRequest(command, peer));
             client.out.flush();
-            System.out.println(client.in.readLine());
-//            if (cmd.hasOption('p')) {
-//                String 
-//            }
+            String resp = SecurityUtil.decrypt(client.in.readLine(), secretKey);
+            System.out.println(resp);
         } catch (ParseException e) {
 
             e.printStackTrace();
@@ -148,7 +136,6 @@ public class Client {
         PEMParser pemParser;
         KeyPair kp = null;
         try {
-//            PemReader l=new PemReader(new FileReader(privateKeyFile));
             pemParser = new PEMParser(new FileReader(privateKeyFile));
             Object object = pemParser.readObject();
             JcaPEMKeyConverter converter = new JcaPEMKeyConverter().setProvider("BC");
@@ -185,8 +172,7 @@ public class Client {
             break;
         }
         json.append("command", cmd);
-        return SecurityUtil.encrypt(json.toJson(),secretKey) + System.lineSeparator();
+        return SecurityUtil.encrypt(json.toJson(), secretKey) + System.lineSeparator();
     }
 
-    
 }

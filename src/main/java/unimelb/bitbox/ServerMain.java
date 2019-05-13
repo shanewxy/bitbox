@@ -15,7 +15,7 @@ import unimelb.bitbox.util.FileSystemManager.FileSystemEvent;
 public class ServerMain implements FileSystemObserver {
     private static Logger log = Logger.getLogger(ServerMain.class.getName());
     private static final int PORT = Integer.parseInt(Configuration.getConfigurationValue("port"));
-    private static final String[] PEERS = Configuration.getConfigurationValue("peers").split(",");
+    public static final String[] PEERS = Configuration.getConfigurationValue("peers").split(",");
     private static final int SYNCINTERVAL = Integer.parseInt(Configuration.getConfigurationValue("syncInterval"));
     private static final String PATH = Configuration.getConfigurationValue("path");
     private List<File> list;
