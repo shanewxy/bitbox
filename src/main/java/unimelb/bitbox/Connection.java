@@ -15,7 +15,7 @@ import java.util.logging.Logger;
 import unimelb.bitbox.util.Configuration;
 import unimelb.bitbox.util.Document;
 import unimelb.bitbox.util.FileSystemManager.FileSystemEvent;
-import unimelb.bitbox.util.HostPort;        
+import unimelb.bitbox.util.HostPort;
 import unimelb.bitbox.util.Protocol;
 
 /**
@@ -49,14 +49,12 @@ public class Connection extends Thread {
 			out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream(), "UTF-8"));
 			in = new BufferedReader(new InputStreamReader(socket.getInputStream(), "UTF-8"));
 			// The first protocol received from a new potential client should be
-			// a handshake
-			// request
+			// a handshake request
 			Document handshake = Document.parse(in.readLine());
 			log.info(handshake.toJson());
 			HostPort hp = null;
 			// Validate the content of this request, send invalid protocol when
-			// anything is
-			// invalid
+			// anything is invalid
 			if (handshake.getString("command").equals("HANDSHAKE_REQUEST")) {
 				try {
 					// Will throw a ClassCastException here if the port field is
@@ -73,8 +71,8 @@ public class Connection extends Thread {
 
 							new Thread(() -> broadcastSyncEvent()).start();
 						} else {
-							out.write(Protocol
-									.createConnectionRefusedP(new ArrayList<HostPort>(PeerServer.connections.values())));
+							out.write(Protocol.createConnectionRefusedP(
+									new ArrayList<HostPort>(PeerServer.connections.values())));
 							out.flush();
 							socket.close();
 							return;

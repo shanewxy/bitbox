@@ -48,7 +48,7 @@ public class PeerClient implements Runnable {
 	private static HostPort localHostPort = new HostPort(Configuration.getConfigurationValue("advertisedName"),
 			Integer.parseInt(Configuration.getConfigurationValue("port")));
 
-	private static Logger log = Logger.getLogger(MessageHandler.class.getName());
+	private static Logger log = Logger.getLogger(PeerClient.class.getName());
 
 	/**
 	 * The client object will try to connect with target peer when created, if

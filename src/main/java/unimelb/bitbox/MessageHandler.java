@@ -26,7 +26,7 @@ public class MessageHandler {
         FILE_MODIFY_RESPONSE, DIRECTORY_CREATE_REQUEST, DIRECTORY_CREATE_RESPONSE, DIRECTORY_DELETE_REQUEST, DIRECTORY_DELETE_RESPONSE, FILE_BYTES_REQUEST, FILE_BYTES_RESPONSE
     }
 
-    private static final Long BLOCKSIZE = Long.parseLong(Configuration.getConfigurationValue("blockSize"));
+    private static final Long BLOCKSIZE = Math.min(Long.parseLong(Configuration.getConfigurationValue("blockSize")),8192);
     private static Logger log = Logger.getLogger(MessageHandler.class.getName());
 
     FileSystemManager fileSystemManager;

@@ -15,15 +15,21 @@ import unimelb.bitbox.util.FileSystemManager.FileSystemEvent;
 public class ServerMain implements FileSystemObserver {
     private static Logger log = Logger.getLogger(ServerMain.class.getName());
     private static final int PORT = Integer.parseInt(Configuration.getConfigurationValue("port"));
-    private static final String[] PEERS = Configuration.getConfigurationValue("peers").split(",");
+    public static final String[] PEERS = Configuration.getConfigurationValue("peers").split(",");
     private static final int SYNCINTERVAL = Integer.parseInt(Configuration.getConfigurationValue("syncInterval"));
     private static final String PATH = Configuration.getConfigurationValue("path");
+    private static final String MODE = Configuration.getConfigurationValue("mode");
+    private static final int UDPPORT = Integer.parseInt(Configuration.getConfigurationValue("udpPort"));
+    public static final int UDPTIMEOUT = Integer.parseInt(Configuration.getConfigurationValue("udpTimeOut"));
+    public static final int UDPATTEMPTS = Integer.parseInt(Configuration.getConfigurationValue("udpRetryAttempts"));
     private List<File> list;
 
     protected FileSystemManager fileSystemManager;
     private PeerClient peerClient;
     private PeerServer peerServer;
     private MessageHandler handler;
+    private UDPServer udpServer;
+    private UDPClient udpClient;
 
     public ServerMain() throws NumberFormatException, IOException, NoSuchAlgorithmException {
     	
@@ -34,14 +40,25 @@ public class ServerMain implements FileSystemObserver {
     	cancelExistFileLoader(PATH);
         
         handler = new MessageHandler(fileSystemManager);
-        peerServer = new PeerServer(PORT, handler);
-        for(String peer : PEERS) {
-            peerClient = new PeerClient(peer, handler);
-            if(peerClient.connected) {
-            	break;
-            }
-        }
-//        new Thread(() -> broadcastSyncEvent()).start();
+        
+        if (MODE.equals("tcp")) {
+        	peerServer = new PeerServer(PORT, handler);
+        	for(String peer : PEERS) {
+        		peerClient = new PeerClient(peer, handler);
+        		if(peerClient.connected) {
+        			break;
+        		}
+        	}
+		}else if (MODE.equals("udp")) {
+			udpServer = new UDPServer(UDPPORT, handler);
+			for (String peer : PEERS) {
+				udpClient = new UDPClient(peer, handler);
+				if (udpClient.connected) {
+					break;
+				}
+			}
+		}
+        
     }
 
     /**
@@ -78,9 +95,18 @@ public class ServerMain implements FileSystemObserver {
     public void processFileSystemEvent(FileSystemEvent fileSystemEvent) {
         String msg = handler.toJson(fileSystemEvent);
         try {
-            if (peerClient != null && peerClient.connected)
-                peerClient.sendToServer(msg);
-            peerServer.sendToClients(msg);
+        	if (MODE.equals("tcp")) {
+        		if (peerClient != null && peerClient.connected)
+        			peerClient.sendToServer(msg);
+        		peerServer.sendToClients(msg);
+			}else if(MODE.equals("udp")){
+				udpServer.sendToClients(msg);
+				if (udpClient != null && udpClient.connected) {
+					udpClient.sendToServer(msg);
+				}
+				
+			}
+        	
         } catch (Exception e) {
             e.printStackTrace();
         }
