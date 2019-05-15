@@ -21,8 +21,8 @@ public class ServerMain implements FileSystemObserver {
     private List<File> list;
 
     protected FileSystemManager fileSystemManager;
-    private PeerClient peerClient;
-    private PeerServer peerServer;
+    private TCPClient tCPClient;
+    private TCPServer tCPServer;
     private MessageHandler handler;
 
     public ServerMain() throws NumberFormatException, IOException, NoSuchAlgorithmException {
@@ -34,10 +34,10 @@ public class ServerMain implements FileSystemObserver {
         cancelExistFileLoader(PATH);
 
         handler = new MessageHandler(fileSystemManager);
-        peerServer = new PeerServer(PORT, handler);
+        tCPServer = new TCPServer(PORT, handler);
         for (String peer : PEERS) {
-            peerClient = new PeerClient(peer, handler);
-            if (peerClient.connected) {
+            tCPClient = new TCPClient(peer, handler);
+            if (tCPClient.connected) {
                 break;
             }
         }
@@ -81,9 +81,9 @@ public class ServerMain implements FileSystemObserver {
     public void processFileSystemEvent(FileSystemEvent fileSystemEvent) {
         String msg = handler.toJson(fileSystemEvent);
         try {
-            if (peerClient != null && peerClient.connected)
-                peerClient.sendToServer(msg);
-            peerServer.sendToClients(msg);
+            if (tCPClient != null && tCPClient.connected)
+                tCPClient.sendToServer(msg);
+            tCPServer.sendToClients(msg);
         } catch (Exception e) {
             e.printStackTrace();
         }

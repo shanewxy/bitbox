@@ -155,11 +155,11 @@ public class Server {
         Document resp = new Document();
         String command = "LIST_PEERS_RESPONSE";
         ArrayList<Document> peers = new ArrayList<Document>();
-        for (Connection con : PeerServer.connections.keySet()) {
-            peers.add(PeerServer.connections.get(con).toDoc());
+        for (Connection con : TCPServer.connections.keySet()) {
+            peers.add(TCPServer.connections.get(con).toDoc());
         }
-        for (Socket con : PeerClient.connections.keySet()) {
-            peers.add(PeerClient.connections.get(con).toDoc());
+        for (Socket con : TCPClient.connections.keySet()) {
+            peers.add(TCPClient.connections.get(con).toDoc());
         }
         for (String peer : ServerMain.PEERS) {
             peers.add(new HostPort(peer).toDoc());
@@ -173,7 +173,7 @@ public class Server {
         String command = "CONNECT_PEER_RESPONSE";
         json.replace("command", command);
         HostPort hp = new HostPort(json);
-        PeerClient client = new PeerClient(hp.toString(), handler);
+        TCPClient client = new TCPClient(hp.toString(), handler);
         boolean status = false;
         String msg = null;
         if (client.connected) {
@@ -194,18 +194,18 @@ public class Server {
         HostPort h = new HostPort(json);
         boolean status = false;
         String msg = null;
-        if (!PeerServer.connections.containsValue(h) && !PeerClient.connections.containsValue(h)) {
+        if (!TCPServer.connections.containsValue(h) && !TCPClient.connections.containsValue(h)) {
             status = false;
             msg = "connection not active";
         }
 
         else {
-            for (Connection con : PeerServer.connections.keySet()) {
-                if (PeerServer.connections.get(con).equals(h)) {
+            for (Connection con : TCPServer.connections.keySet()) {
+                if (TCPServer.connections.get(con).equals(h)) {
                     try {
                         con.socket.close();
                         con.connected = false;
-                        PeerServer.connections.remove(con);
+                        TCPServer.connections.remove(con);
                         status = true;
                         msg = "disconnected from peer";
                     } catch (IOException e) {
@@ -213,11 +213,11 @@ public class Server {
                     }
                 }
             }
-            for (Socket con : PeerClient.connections.keySet()) {
-                if (PeerClient.connections.get(con).equals(h)) {
+            for (Socket con : TCPClient.connections.keySet()) {
+                if (TCPClient.connections.get(con).equals(h)) {
                     try {
                         con.close();
-                        PeerClient.connections.remove(con);
+                        TCPClient.connections.remove(con);
                         status = true;
                         msg = "disconnected from peer";
                     } catch (IOException e) {

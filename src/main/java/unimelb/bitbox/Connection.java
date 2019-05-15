@@ -63,17 +63,17 @@ public class Connection extends Thread {
                     // not a integer
                     clientHostPort = new HostPort((Document) handshake.get("hostPort"));
                     if (clientHostPort.host != null) {
-                        if (PeerServer.clientCount.get() < PeerServer.maximumConnections) {
-                            PeerServer.clientCount.getAndIncrement();
-                            out.write(Protocol.createHandshakeResponseP(PeerServer.localHostPort));
+                        if (TCPServer.clientCount.get() < TCPServer.maximumConnections) {
+                            TCPServer.clientCount.getAndIncrement();
+                            out.write(Protocol.createHandshakeResponseP(TCPServer.localHostPort));
                             out.flush();
-                            PeerServer.connections.put(this, clientHostPort);
+                            TCPServer.connections.put(this, clientHostPort);
 
                             this.connected = true;
 
                             new Thread(() -> broadcastSyncEvent()).start();
                         } else {
-                            out.write(Protocol.createConnectionRefusedP(new ArrayList<HostPort>(PeerServer.connections.values())));
+                            out.write(Protocol.createConnectionRefusedP(new ArrayList<HostPort>(TCPServer.connections.values())));
                             out.flush();
                             socket.close();
                             return;
@@ -108,8 +108,8 @@ public class Connection extends Thread {
                 if (msg == null) {
                     log.warning("Connection closed remotely ");
                     socket.close();
-                    PeerServer.clientCount.decrementAndGet();
-                    PeerServer.connections.remove(this);
+                    TCPServer.clientCount.decrementAndGet();
+                    TCPServer.connections.remove(this);
                     return;
                 }
                 List<Document> responses = handler.handleMsg(msg);
@@ -143,7 +143,7 @@ public class Connection extends Thread {
                     }
                 } catch (SocketException e) {
                     this.connected = false;
-                    PeerServer.connections.remove(this);
+                    TCPServer.connections.remove(this);
                 } catch (IOException e) {
                     log.warning(e.getMessage());
                 }

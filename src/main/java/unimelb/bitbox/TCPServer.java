@@ -16,13 +16,13 @@ import unimelb.bitbox.util.HostPort;
  * @author Xueying Wang
  * @author Yichen Liu
  */
-public class PeerServer {
+public class TCPServer {
 	
 	/**
 	 * Using AtomicInteger to make a thread safe counter for connected peers
 	 */
     public static AtomicInteger clientCount;
-    private static Logger log = Logger.getLogger(PeerServer.class.getName());
+    private static Logger log = Logger.getLogger(TCPServer.class.getName());
     private ServerSocket ss;
 
     /* Used a normal HashMap rather than ConcurrentHashMap because each connection object (the key in the map)
@@ -34,7 +34,7 @@ public class PeerServer {
 	
 	public static HostPort localHostPort = new HostPort(Configuration.getConfigurationValue("advertisedName"), Integer.parseInt(Configuration.getConfigurationValue("port")));
 	
-	public PeerServer(int port, MessageHandler handler) {
+	public TCPServer(int port, MessageHandler handler) {
         try {
             ss = new ServerSocket(port);
             clientCount = new AtomicInteger();

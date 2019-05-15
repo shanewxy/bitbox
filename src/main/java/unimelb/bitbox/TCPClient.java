@@ -27,7 +27,7 @@ import unimelb.bitbox.util.FileSystemManager.FileSystemEvent;
  * @author Xueying Wang
  * @author Yichen Liu
  */
-public class PeerClient implements Runnable {
+public class TCPClient implements Runnable {
     private static final int SYNCINTERVAL = Integer.parseInt(Configuration.getConfigurationValue("syncInterval"));
     public static HashMap<Socket, HostPort> connections = new HashMap<Socket, HostPort>();
 
@@ -59,7 +59,7 @@ public class PeerClient implements Runnable {
      * @param peer    the ip address and port number of the peer we want to connect
      * @param handler the message handler object
      */
-    public PeerClient(String peer, MessageHandler handler) {
+    public TCPClient(String peer, MessageHandler handler) {
         this.handler = handler;
         targetHostPort = new HostPort(peer);
 
