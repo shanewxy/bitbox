@@ -16,6 +16,7 @@ import java.security.spec.KeySpec;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Base64.Encoder;
+import java.util.HashMap;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
@@ -24,6 +25,9 @@ import javax.crypto.KeyGenerator;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
 
+import unimelb.bitbox.tcp.Connection;
+import unimelb.bitbox.tcp.TCPClient;
+import unimelb.bitbox.tcp.TCPServer;
 import unimelb.bitbox.util.Configuration;
 import unimelb.bitbox.util.Document;
 import unimelb.bitbox.util.HostPort;
@@ -56,7 +60,7 @@ public class Server {
                 System.out.println(authrequest);
                 Document auth = Document.parse(authrequest);
                 String identity = auth.getString("identity");
-                out.write(generateSecretKey(identity));
+                out.write(generateAuthResponse(identity));
                 out.flush();
                 String command = in.readLine();
                 System.out.println(command);
@@ -73,7 +77,7 @@ public class Server {
         }
     }
 
-    public String generateSecretKey(String identity) {
+    public String generateAuthResponse(String identity) {
         Document doc = new Document();
         doc.append("command", "AUTH_RESPONSE");
         String message = "public key not found";
@@ -88,7 +92,7 @@ public class Server {
                     KeySpec spec = new SSHEncodedToRSAPublicConverter(key).convertToRSAPublicKey();
                     KeyFactory kf = KeyFactory.getInstance("RSA");
                     PublicKey pkey = kf.generatePublic(spec);
-                    doc.append("AES128", publicEncrypt(pkey));
+                    doc.append("AES128", encryptSecretKey(pkey));
                 } catch (NoSuchAlgorithmException e) {
                     e.printStackTrace();
                 } catch (InvalidKeySpecException e) {
@@ -103,7 +107,7 @@ public class Server {
 
     }
 
-    private String publicEncrypt(PublicKey publicKey) {
+    private String encryptSecretKey(PublicKey publicKey) {
         Cipher cipher;
         String encoded = null;
         try {
@@ -155,11 +159,13 @@ public class Server {
         Document resp = new Document();
         String command = "LIST_PEERS_RESPONSE";
         ArrayList<Document> peers = new ArrayList<Document>();
-        for (Connection con : TCPServer.connections.keySet()) {
-            peers.add(TCPServer.connections.get(con).toDoc());
+        HashMap<Connection, HostPort> serverConnections = TCPServer.connections;
+        for (Connection con : serverConnections.keySet()) {
+            peers.add(serverConnections.get(con).toDoc());
         }
-        for (Socket con : TCPClient.connections.keySet()) {
-            peers.add(TCPClient.connections.get(con).toDoc());
+        HashMap<Socket, HostPort> clientConnections = TCPClient.connections;
+        for (Socket con : clientConnections.keySet()) {
+            peers.add(clientConnections.get(con).toDoc());
         }
         for (String peer : ServerMain.PEERS) {
             peers.add(new HostPort(peer).toDoc());
@@ -194,18 +200,20 @@ public class Server {
         HostPort h = new HostPort(json);
         boolean status = false;
         String msg = null;
-        if (!TCPServer.connections.containsValue(h) && !TCPClient.connections.containsValue(h)) {
+        HashMap<Connection, HostPort> serverConnections = TCPServer.connections;
+        HashMap<Socket, HostPort> clientConnections = TCPClient.connections;
+        if (!serverConnections.containsValue(h) && !clientConnections.containsValue(h)) {
             status = false;
             msg = "connection not active";
         }
 
         else {
-            for (Connection con : TCPServer.connections.keySet()) {
-                if (TCPServer.connections.get(con).equals(h)) {
+            for (Connection con : serverConnections.keySet()) {
+                if (serverConnections.get(con).equals(h)) {
                     try {
-                        con.socket.close();
+                        con.getSocket().close();
                         con.connected = false;
-                        TCPServer.connections.remove(con);
+                        serverConnections.remove(con);
                         status = true;
                         msg = "disconnected from peer";
                     } catch (IOException e) {
@@ -213,11 +221,11 @@ public class Server {
                     }
                 }
             }
-            for (Socket con : TCPClient.connections.keySet()) {
-                if (TCPClient.connections.get(con).equals(h)) {
+            for (Socket con : clientConnections.keySet()) {
+                if (clientConnections.get(con).equals(h)) {
                     try {
                         con.close();
-                        TCPClient.connections.remove(con);
+                        clientConnections.remove(con);
                         status = true;
                         msg = "disconnected from peer";
                     } catch (IOException e) {

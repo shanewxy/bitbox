@@ -1,4 +1,4 @@
-package unimelb.bitbox;
+package unimelb.bitbox.tcp;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
 
+import unimelb.bitbox.MessageHandler;
 import unimelb.bitbox.util.Configuration;
 import unimelb.bitbox.util.Document;
 import unimelb.bitbox.util.FileSystemManager.FileSystemEvent;
@@ -31,7 +32,7 @@ public class Connection extends Thread {
 
     BufferedReader in;
     BufferedWriter out;
-    protected Socket socket;
+    private Socket socket;
     private MessageHandler handler;
     private HostPort clientHostPort;
     private static Logger log = Logger.getLogger(MessageHandler.class.getName());
@@ -154,6 +155,13 @@ public class Connection extends Thread {
                 log.warning(e.getMessage());
             }
         }
+    }
+
+    /**
+     * @return the socket
+     */
+    public Socket getSocket() {
+        return socket;
     }
 
 }

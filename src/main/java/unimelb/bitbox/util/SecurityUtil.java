@@ -26,22 +26,22 @@ public class SecurityUtil {
             byte[] encrypted = cipher.doFinal(json.getBytes("UTF-8"));
             doc.append("payload", encoder.encodeToString(encrypted));
         } catch (InvalidKeyException e) {
-            // TODO Auto-generated catch block
+
             e.printStackTrace();
         } catch (NoSuchAlgorithmException e) {
-            // TODO Auto-generated catch block
+
             e.printStackTrace();
         } catch (NoSuchPaddingException e) {
-            // TODO Auto-generated catch block
+
             e.printStackTrace();
         } catch (IllegalBlockSizeException e) {
-            // TODO Auto-generated catch block
+
             e.printStackTrace();
         } catch (BadPaddingException e) {
-            // TODO Auto-generated catch block
+
             e.printStackTrace();
         } catch (UnsupportedEncodingException e) {
-            // TODO Auto-generated catch block
+
             e.printStackTrace();
         }
         return doc.toJson();
@@ -56,19 +56,19 @@ public class SecurityUtil {
             cipher.init(Cipher.DECRYPT_MODE, secretKey);
             decrpted = new String(cipher.doFinal(decoded));
         } catch (InvalidKeyException e) {
-            // TODO Auto-generated catch block
+
             e.printStackTrace();
         } catch (NoSuchAlgorithmException e) {
-            // TODO Auto-generated catch block
+
             e.printStackTrace();
         } catch (NoSuchPaddingException e) {
-            // TODO Auto-generated catch block
+
             e.printStackTrace();
         } catch (IllegalBlockSizeException e) {
-            // TODO Auto-generated catch block
+
             e.printStackTrace();
         } catch (BadPaddingException e) {
-            // TODO Auto-generated catch block
+
             e.printStackTrace();
         }
         return decrpted;

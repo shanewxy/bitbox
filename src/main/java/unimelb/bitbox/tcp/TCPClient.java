@@ -1,4 +1,4 @@
-package unimelb.bitbox;
+package unimelb.bitbox.tcp;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -14,6 +14,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.logging.Logger;
 
+import unimelb.bitbox.MessageHandler;
 import unimelb.bitbox.util.Configuration;
 import unimelb.bitbox.util.Document;
 import unimelb.bitbox.util.HostPort;

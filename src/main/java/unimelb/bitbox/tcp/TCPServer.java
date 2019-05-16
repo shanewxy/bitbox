@@ -1,4 +1,4 @@
-package unimelb.bitbox;
+package unimelb.bitbox.tcp;
 
 import java.io.IOException;
 import java.net.ServerSocket;
@@ -7,6 +7,8 @@ import java.net.SocketException;
 import java.util.HashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Logger;
+
+import unimelb.bitbox.MessageHandler;
 import unimelb.bitbox.util.Configuration;
 import unimelb.bitbox.util.HostPort;
 
