@@ -113,23 +113,25 @@ public class UDPServer {
 	}
 
 	public void sendToClients(String msg) {
-		synchronized (rememberedClients) {
-			if (rememberedClients.isEmpty()) {
-				return;
-			}
-			for (HostPort hp : rememberedClients) {
-				
-				try {
-					data = msg.getBytes();
-					send = new DatagramPacket(data, data.length, InetAddress.getByName(hp.host), hp.port);
-					ds.send(send);
-				} catch (UnknownHostException e1) {
-					log.warning(e1.getMessage());
-				} catch (IOException e) {
-					log.warning(e.getMessage());
-				}
+//		synchronized (rememberedClients) {
+		// There is no connection in udp mode, so server cannot know whether a client is dead or not.
+		// So there is no need to dynamically update the remember list, then the synchronized keyword is useless.
+		if (rememberedClients.isEmpty()) {
+			return;
+		}
+		for (HostPort hp : rememberedClients) {
+			
+			try {
+				data = msg.getBytes();
+				send = new DatagramPacket(data, data.length, InetAddress.getByName(hp.host), hp.port);
+				ds.send(send);
+			} catch (UnknownHostException e1) {
+				log.warning(e1.getMessage());
+			} catch (IOException e) {
+				log.warning(e.getMessage());
 			}
 		}
+//		}
 	}
 	
 	private void broadcastSyncEvent() {
