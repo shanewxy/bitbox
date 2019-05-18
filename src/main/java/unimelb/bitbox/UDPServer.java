@@ -87,19 +87,50 @@ public class UDPServer {
 		
 		log.info("received HANDSHAKE_REQUEST from " + hp.toString());
 		
-		if (rememberedClients.size() == MAXCONNECTIONS) {
-			log.info("connections reached max, please try connecting other peers");
-			byte[] conRefused = Protocol.createConnectionRefusedP(new ArrayList<HostPort>(UDPServer.rememberedClients)).getBytes();
-			send = new DatagramPacket(conRefused, conRefused.length, received.getAddress(), received.getPort());
-			try {
-				ds.send(send);
-			} catch (IOException e) {
-				e.printStackTrace();
+//		if (rememberedClients.size() == MAXCONNECTIONS) {
+//			log.info("connections reached max, please try connecting other peers");
+//			byte[] conRefused = Protocol.createConnectionRefusedP(new ArrayList<HostPort>(UDPServer.rememberedClients)).getBytes();
+//			send = new DatagramPacket(conRefused, conRefused.length, received.getAddress(), received.getPort());
+//			try {
+//				ds.send(send);
+//			} catch (IOException e) {
+//				e.printStackTrace();
+//			}
+//		}else {
+//			if (!rememberedClients.contains(hp) && !Arrays.asList(ServerMain.PEERS).contains(hp.toString())){
+//				rememberedClients.add(hp);
+//			}
+//			byte[] handShakeResp = Protocol.createHandshakeResponseP(hp).getBytes();
+//			send = new DatagramPacket(handShakeResp, handShakeResp.length, received.getAddress(), received.getPort());
+//			log.info("sending HANDSHAKE_RESPONSE to "+ hp.toString());
+//			try {
+//				ds.send(send);
+//			} catch (IOException e) {
+//				e.printStackTrace();
+//			}
+//		}
+		if (!rememberedClients.contains(hp)) {
+			if(rememberedClients.size() == MAXCONNECTIONS) {
+				log.info("connections reached max, please try connecting other peers");
+				byte[] conRefused = Protocol.createConnectionRefusedP(new ArrayList<HostPort>(UDPServer.rememberedClients)).getBytes();
+				send = new DatagramPacket(conRefused, conRefused.length, received.getAddress(), received.getPort());
+				try {
+					ds.send(send);
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}else {
+				rememberedClients.add(hp);
+				byte[] handShakeResp = Protocol.createHandshakeResponseP(hp).getBytes();
+				send = new DatagramPacket(handShakeResp, handShakeResp.length, received.getAddress(), received.getPort());
+				log.info("sending HANDSHAKE_RESPONSE to "+ hp.toString());
+				try {
+					ds.send(send);
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
 			}
 		}else {
-			if (!rememberedClients.contains(hp) && !Arrays.asList(ServerMain.PEERS).contains(hp.toString())){
-				rememberedClients.add(hp);
-			}
 			byte[] handShakeResp = Protocol.createHandshakeResponseP(hp).getBytes();
 			send = new DatagramPacket(handShakeResp, handShakeResp.length, received.getAddress(), received.getPort());
 			log.info("sending HANDSHAKE_RESPONSE to "+ hp.toString());
