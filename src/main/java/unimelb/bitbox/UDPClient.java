@@ -20,19 +20,21 @@ public class UDPClient implements Runnable {
 
 	private static Logger log = Logger.getLogger(UDPClient.class.getName());
 	private static final int SYNCINTERVAL = Integer.parseInt(Configuration.getConfigurationValue("syncInterval"));
+	private static HostPort localHostPort = new HostPort(Configuration.getConfigurationValue("advertisedName"),
+			Integer.parseInt(Configuration.getConfigurationValue("udpPort")));
 	private MessageHandler handler;
 	private DatagramSocket ds;
 	private DatagramPacket received;
 	private DatagramPacket send;
 	private byte[] data;
-	private HostPort thp;
+	private HostPort targetHostPort;
 	private SocketAddress connectedHp;
 	public boolean connected = false;
 	public int attempts = 0;
 
 	public UDPClient(String peer, MessageHandler handler) {
 		this.handler = handler;
-		this.thp = new HostPort(peer);
+		this.targetHostPort = new HostPort(peer);
 		try {
 			this.ds = new DatagramSocket();
 			this.data = new byte[8192];
@@ -43,7 +45,7 @@ public class UDPClient implements Runnable {
 			
 			if (connected) {
 				
-				log.info("successfully connected to " + thp.toString());
+				log.info("successfully connected to " + targetHostPort.toString());
 				new Thread(this).start();
 			}
 			
@@ -63,7 +65,7 @@ public class UDPClient implements Runnable {
 		do {
 			// send handshake request to target host
 			try {
-				handShakeToPeer(thp);
+				handShakeToPeer(targetHostPort);
 				
 				ds.receive(received);
 				if (!received.getAddress().equals(send.getAddress())) {
@@ -100,7 +102,7 @@ public class UDPClient implements Runnable {
 		} while (!connected && (attempts < ServerMain.UDPATTEMPTS));
 		
 		if (attempts >= ServerMain.UDPATTEMPTS) {
-			log.info(thp.toString()+" refused connection");
+			log.info(targetHostPort.toString()+" refused connection");
 		}
 
 	}
@@ -138,7 +140,7 @@ public class UDPClient implements Runnable {
 		}
 
 		for (Document peer : peers) {
-			thp = new HostPort(peer);
+			targetHostPort = new HostPort(peer);
 			if (!connected) {
 				makeConnection();
 			}
@@ -148,7 +150,7 @@ public class UDPClient implements Runnable {
 	private void handShakeToPeer(HostPort thp) {
 		try {
 			log.info("Sending handshake to : " + thp.toString());
-			byte[] handShakeReq = Protocol.createHandshakeRequestP(thp).getBytes();
+			byte[] handShakeReq = Protocol.createHandshakeRequestP(localHostPort).getBytes();
 			send = new DatagramPacket(handShakeReq, handShakeReq.length, InetAddress.getByName(thp.host), thp.port);
 			ds.send(send);
 		} catch (IOException e) {
