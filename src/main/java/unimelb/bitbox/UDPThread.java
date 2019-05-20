@@ -1,6 +1,7 @@
 package unimelb.bitbox;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.util.List;
@@ -33,21 +34,27 @@ public class UDPThread extends Thread{
 		
 		
 		// read data from packet
-		String msg = new String(received.getData(),0,received.getLength());
-		if (msg != null) {
-			
-			List<Document> responses = handler.handleMsg(msg);
-			try{
-				if (responses !=null) {
-					for (Document d : responses) {
-						byte[] data = d.toJson().getBytes();
-						DatagramPacket response = new DatagramPacket(data, data.length, received.getAddress(), received.getPort());
-						ds.send(response);
+		String msg;
+		try {
+			msg = new String(received.getData(),0,received.getLength(),"UTF-8");
+			if (msg != null) {
+				
+				List<Document> responses = handler.handleMsg(msg);
+				try{
+					if (responses !=null) {
+						for (Document d : responses) {
+							byte[] data = d.toJson().getBytes();
+							DatagramPacket response = new DatagramPacket(data, data.length, received.getAddress(), received.getPort());
+							ds.send(response);
+						}
 					}
+				}catch (IOException e) {
+					log.warning(e.getMessage());
 				}
-			}catch (IOException e) {
-				log.warning(e.getMessage());
 			}
+		} catch (UnsupportedEncodingException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
 		}
 		
 	}

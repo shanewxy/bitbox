@@ -74,7 +74,7 @@ public class UDPClient implements Runnable {
 
 				if (received.getData().length > 0) {
 
-					Document msg = Document.parse(new String(new String(received.getData(), 0, received.getLength())));
+					Document msg = Document.parse(new String(received.getData(),0,received.getLength(),"UTF-8"));
 					String cmd = msg.getString("command");
 					if (cmd != null) {
 
@@ -115,6 +115,7 @@ public class UDPClient implements Runnable {
 				received = new DatagramPacket(data, data.length);
 				ds.receive(received);
 
+				// This should be included as the INVALID PROTOCAL, remote udp peer cannot inform the local peer that he has disconnected
 				if (received.getData().length == 0) {
 					this.connected = false;
 					ds.close();
@@ -150,7 +151,7 @@ public class UDPClient implements Runnable {
 	private void handShakeToPeer(HostPort thp) {
 		try {
 			log.info("Sending handshake to : " + thp.toString());
-			byte[] handShakeReq = Protocol.createHandshakeRequestP(localHostPort).getBytes();
+			byte[] handShakeReq = Protocol.createHandshakeRequestP(localHostPort).getBytes("UTF-8");
 			send = new DatagramPacket(handShakeReq, handShakeReq.length, InetAddress.getByName(thp.host), thp.port);
 			ds.send(send);
 		} catch (IOException e) {
@@ -165,7 +166,8 @@ public class UDPClient implements Runnable {
 			
 			if (connected) {
 				// send msg to connected host port
-				send = new DatagramPacket(msg.getBytes(), msg.getBytes().length, connectedHp);
+				byte[] data = msg.getBytes("UTF-8");
+				send = new DatagramPacket(data, data.length, connectedHp);
 				ds.send(send);
 			}
 		}catch (IOException e) {

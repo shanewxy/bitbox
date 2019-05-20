@@ -48,7 +48,7 @@ public class UDPServer {
 					ds.receive(received); // receive packet from client
 					
 					if (data.length > 0) {
-						Document json = (Document) Document.parse(new String(received.getData(),0,received.getLength()));
+						Document json = (Document) Document.parse(new String(received.getData(),0,received.getLength(),"UTF-8"));
 						String cmd = json.getString("command");
 						if (cmd != null && cmd.equals("HANDSHAKE_REQUEST")) {
 							handleHandshake(json);
@@ -112,29 +112,29 @@ public class UDPServer {
 		if (!rememberedClients.contains(hp)) {
 			if(rememberedClients.size() == MAXCONNECTIONS) {
 				log.info("connections reached max, please try connecting other peers");
-				byte[] conRefused = Protocol.createConnectionRefusedP(new ArrayList<HostPort>(UDPServer.rememberedClients)).getBytes();
-				send = new DatagramPacket(conRefused, conRefused.length, received.getAddress(), received.getPort());
 				try {
+					byte[] conRefused = Protocol.createConnectionRefusedP(new ArrayList<HostPort>(UDPServer.rememberedClients)).getBytes("UTF-8");
+					send = new DatagramPacket(conRefused, conRefused.length, received.getAddress(), received.getPort());
 					ds.send(send);
 				} catch (IOException e) {
 					e.printStackTrace();
 				}
 			}else {
 				rememberedClients.add(hp);
-				byte[] handShakeResp = Protocol.createHandshakeResponseP(hp).getBytes();
-				send = new DatagramPacket(handShakeResp, handShakeResp.length, received.getAddress(), received.getPort());
 				log.info("sending HANDSHAKE_RESPONSE to "+ hp.toString());
 				try {
+					byte[] handShakeResp = Protocol.createHandshakeResponseP(hp).getBytes("UTF-8");
+					send = new DatagramPacket(handShakeResp, handShakeResp.length, received.getAddress(), received.getPort());
 					ds.send(send);
 				} catch (IOException e) {
 					e.printStackTrace();
 				}
 			}
 		}else {
-			byte[] handShakeResp = Protocol.createHandshakeResponseP(hp).getBytes();
-			send = new DatagramPacket(handShakeResp, handShakeResp.length, received.getAddress(), received.getPort());
 			log.info("sending HANDSHAKE_RESPONSE to "+ hp.toString());
 			try {
+				byte[] handShakeResp = Protocol.createHandshakeResponseP(hp).getBytes("UTF-8");
+				send = new DatagramPacket(handShakeResp, handShakeResp.length, received.getAddress(), received.getPort());
 				ds.send(send);
 			} catch (IOException e) {
 				e.printStackTrace();
@@ -153,7 +153,7 @@ public class UDPServer {
 		for (HostPort hp : rememberedClients) {
 			
 			try {
-				data = msg.getBytes();
+				data = msg.getBytes("UTF-8");
 				send = new DatagramPacket(data, data.length, InetAddress.getByName(hp.host), hp.port);
 				ds.send(send);
 			} catch (UnknownHostException e1) {
