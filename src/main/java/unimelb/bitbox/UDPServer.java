@@ -7,8 +7,9 @@ import java.net.InetAddress;
 import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map.Entry;
 import java.util.logging.Logger;
 
 import unimelb.bitbox.util.Configuration;
@@ -23,18 +24,31 @@ public class UDPServer {
 	private static final int MAXCONNECTIONS = Integer
 			.parseInt(Configuration.getConfigurationValue("maximumIncommingConnections"));
 	private static final int SYNCINTERVAL = Integer.parseInt(Configuration.getConfigurationValue("syncInterval"));
-	private static List<HostPort> rememberedClients = new ArrayList<HostPort>();
-
+//	private static List<HostPort> rememberedClients = new ArrayList<HostPort>();
+	
+	/**
+	 *  A HashMap store every accepted peers in the form of <HostAddr, PortNum>,
+	 *  The reason for choosing this format is that it is essential to check every incoming DatagramPacket's
+	 *  hostport to ignore other peers which haven't made handshake requests with the local peer.
+	 *  Using HashMap structure can make every query(check whether the hostport is remembered)
+	 *  more efficient (O(1)), faster than traversing a list of HostPort objects. The value indicates the
+	 *  advertised port when the handshake request has a different port number with the real port number,
+	 *  default -1 otherwise.
+	 */
+	private static HashMap<String, Integer> rememberedPeers = new HashMap<String, Integer>();
+	private static ArrayList<HostPort> candidates = new ArrayList<HostPort>();
 	private MessageHandler handler;
 	private DatagramSocket ds;
 	private DatagramPacket received;
 	private DatagramPacket send;
 	private byte[] data;
+	private int clientCount;
 
 	public UDPServer(int udpPort, MessageHandler handler) {
 		try {
 			ds = new DatagramSocket(udpPort);
 			this.handler = handler;
+			clientCount = 0;
 			// ds.setSoTimeout(ServerMain.UDPTIMEOUT);
 		} catch (SocketException e) {
 			log.warning(e.getMessage());
@@ -46,15 +60,30 @@ public class UDPServer {
 					data = new byte[8192];
 					received = new DatagramPacket(data, data.length);
 					ds.receive(received); // receive packet from client
-					
-					if (data.length > 0) {
-						Document json = (Document) Document.parse(new String(received.getData(),0,received.getLength(),"UTF-8"));
-						String cmd = json.getString("command");
-						if (cmd != null && cmd.equals("HANDSHAKE_REQUEST")) {
-							handleHandshake(json);
+					String incomingHost = received.getAddress().getHostAddress();
+					int incomingPort = received.getPort();
+					HostPort incomingHostPort = new HostPort(incomingHost, incomingPort);
+					Integer additionalPort = rememberedPeers.get(incomingHostPort.toString());
+					if (additionalPort != null) {
+						new Thread(new UDPThread(received, ds, handler)).start();
+					}else {
+						if (clientCount < MAXCONNECTIONS) {
+							Document json = (Document) Document.parse(new String(received.getData(),0,received.getLength(),"UTF-8"));
+							if (json.getString("command").equals("HANDSHAKE_REQUEST")) {
+								handleHandshake(json, incomingHostPort);
+								clientCount++;
+								System.out.println("Now we have "+rememberedPeers.toString());
+							}
 						}else {
-							// create a new thread to handle incoming msg
-							new Thread(new UDPThread(received, ds, handler)).start();
+							log.info("connections reached max, please try connecting other peers");
+//							byte[] conRefused = Protocol.createConnectionRefusedP(new ArrayList<HostPort>(UDPServer.rememberedClients)).getBytes();
+							byte[] conRefused = Protocol.createConnectionRefusedP(candidates).getBytes("UTF-8");
+							send = new DatagramPacket(conRefused, conRefused.length, received.getAddress(), received.getPort());
+							try {
+								ds.send(send);
+							} catch (IOException e) {
+								e.printStackTrace();
+							}
 						}
 					}
 				}
@@ -79,13 +108,56 @@ public class UDPServer {
 	 * @param received
 	 * @throws IOException
 	 */
-	public void handleHandshake(Document msg) {
+	public void handleHandshake(Document msg, HostPort realHostPort) {
 		// if server received a handshake request, response to the sender a
 		// handshake response
-		Document hostPort = (Document) msg.get("hostPort");
-		HostPort hp = new HostPort(hostPort.getString("host"), (int)hostPort.getLong("port"));
+		Document advertisedHostPortDoc = (Document) msg.get("hostPort");
+		String advertisedHost;
+		try {
+			advertisedHost = InetAddress.getByName(advertisedHostPortDoc.getString("host")).getHostAddress();
+			String realHost = realHostPort.host;
+			int realPort = realHostPort.port;
+			int advertisedPort = (int)advertisedHostPortDoc.getLong("port");
+			HostPort advertisedHostPort = new HostPort(advertisedHost, advertisedPort);
+			
+			// Check whether the advertised host address and real host address are same
+			if(!advertisedHost.equals(realHost)) {
+				log.warning("Fake ip address: Told: "+advertisedHost+" but it is: "+realHost);
+				// Send invalid protocol back
+				try {
+					byte[] fakeIP = Protocol.createInvalidP("Real host address is not same as the advertised one.").getBytes("UTF-8");
+					log.info("Sent invalid protocol to: "+advertisedHostPort.toString()+" because of fake ip address");
+					ds.send(new DatagramPacket(fakeIP, fakeIP.length, InetAddress.getByName(advertisedHost), advertisedPort));
+					return;
+				}catch(IOException ioe) {
+					ioe.printStackTrace();
+				}
+			}
+
+			log.info("received HANDSHAKE_REQUEST from " + advertisedHostPort.toString() + "(" + realHostPort.toString() + ")");
+			
+			int additionalPort = -1;
+			if (realPort != advertisedPort) {
+				additionalPort = advertisedPort;
+			}
+			rememberedPeers.put(realHostPort.toString(), additionalPort);
+			candidates.add(new HostPort(realHost, advertisedPort));
+			
+
+			byte[] handShakeResp = Protocol.createHandshakeResponseP(realHostPort).getBytes();
+			send = new DatagramPacket(handShakeResp, handShakeResp.length, received.getAddress(), received.getPort());
+			log.info("sending HANDSHAKE_RESPONSE to "+ realHostPort.toString());
+			try {
+				ds.send(send);
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+			
+		} catch (UnknownHostException e) {
+			// TODO Auto-generated catch block
+			log.warning(e.getMessage());
+		}
 		
-		log.info("received HANDSHAKE_REQUEST from " + hp.toString());
 		
 //		if (rememberedClients.size() == MAXCONNECTIONS) {
 //			log.info("connections reached max, please try connecting other peers");
@@ -109,37 +181,6 @@ public class UDPServer {
 //				e.printStackTrace();
 //			}
 //		}
-		if (!rememberedClients.contains(hp)) {
-			if(rememberedClients.size() == MAXCONNECTIONS) {
-				log.info("connections reached max, please try connecting other peers");
-				try {
-					byte[] conRefused = Protocol.createConnectionRefusedP(new ArrayList<HostPort>(UDPServer.rememberedClients)).getBytes("UTF-8");
-					send = new DatagramPacket(conRefused, conRefused.length, received.getAddress(), received.getPort());
-					ds.send(send);
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
-			}else {
-				rememberedClients.add(hp);
-				log.info("sending HANDSHAKE_RESPONSE to "+ hp.toString());
-				try {
-					byte[] handShakeResp = Protocol.createHandshakeResponseP(hp).getBytes("UTF-8");
-					send = new DatagramPacket(handShakeResp, handShakeResp.length, received.getAddress(), received.getPort());
-					ds.send(send);
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
-			}
-		}else {
-			log.info("sending HANDSHAKE_RESPONSE to "+ hp.toString());
-			try {
-				byte[] handShakeResp = Protocol.createHandshakeResponseP(hp).getBytes("UTF-8");
-				send = new DatagramPacket(handShakeResp, handShakeResp.length, received.getAddress(), received.getPort());
-				ds.send(send);
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-		}
 
 	}
 
@@ -147,13 +188,15 @@ public class UDPServer {
 //		synchronized (rememberedClients) {
 		// There is no connection in udp mode, so server cannot know whether a client is dead or not.
 		// So there is no need to dynamically update the remember list, then the synchronized keyword is useless.
-		if (rememberedClients.isEmpty()) {
+//		if (rememberedClients.isEmpty()) {
+		if (rememberedPeers.isEmpty()) {
 			return;
 		}
-		for (HostPort hp : rememberedClients) {
-			
+//		for (HostPort hp : rememberedClients) {
+		for (String str : rememberedPeers.keySet()) {
 			try {
 				data = msg.getBytes("UTF-8");
+				HostPort hp = new HostPort(str);
 				send = new DatagramPacket(data, data.length, InetAddress.getByName(hp.host), hp.port);
 				ds.send(send);
 			} catch (UnknownHostException e1) {
