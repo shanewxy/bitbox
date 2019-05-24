@@ -63,29 +63,30 @@ public class UDPServer {
 					String incomingHost = received.getAddress().getHostAddress();
 					int incomingPort = received.getPort();
 					HostPort incomingHostPort = new HostPort(incomingHost, incomingPort);
-					Integer additionalPort = rememberedPeers.get(incomingHostPort.toString());
-					if (additionalPort != null) {
+					if (rememberedPeers.get(incomingHostPort.toString()) != null) {
 						new Thread(new UDPThread(received, ds, handler)).start();
 					}else {
-						if (clientCount < MAXCONNECTIONS) {
-							Document json = (Document) Document.parse(new String(received.getData(),0,received.getLength(),"UTF-8"));
-							if (json.getString("command").equals("HANDSHAKE_REQUEST")) {
+//						if (clientCount < MAXCONNECTIONS) {
+						Document json = (Document) Document.parse(new String(received.getData(),0,received.getLength(),"UTF-8"));
+						if (json.getString("command").equals("HANDSHAKE_REQUEST")) {
+							if (clientCount < MAXCONNECTIONS) {
 								if (handleHandshake(json, incomingHostPort)) {
 									clientCount++;
 									System.out.println("Now we have "+rememberedPeers.toString());
 								}
-							}
-						}else {
-							log.info("connections reached max, please try connecting other peers");
-//							byte[] conRefused = Protocol.createConnectionRefusedP(new ArrayList<HostPort>(UDPServer.rememberedClients)).getBytes();
-							byte[] conRefused = Protocol.createConnectionRefusedP(candidates).getBytes("UTF-8");
-							send = new DatagramPacket(conRefused, conRefused.length, received.getAddress(), received.getPort());
-							try {
-								ds.send(send);
-							} catch (IOException e) {
-								e.printStackTrace();
+							}else {
+								log.info("connections reached max, please try connecting other peers");
+//								byte[] conRefused = Protocol.createConnectionRefusedP(new ArrayList<HostPort>(UDPServer.rememberedClients)).getBytes();
+								byte[] conRefused = Protocol.createConnectionRefusedP(candidates).getBytes("UTF-8");
+								send = new DatagramPacket(conRefused, conRefused.length, received.getAddress(), received.getPort());
+								try {
+									ds.send(send);
+								} catch (IOException e) {
+									e.printStackTrace();
+								}
 							}
 						}
+//						}
 					}
 				}
 			} catch (IOException e) {
