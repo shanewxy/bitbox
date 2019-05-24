@@ -43,7 +43,7 @@ public class UDPThread extends Thread{
 				try{
 					if (responses !=null) {
 						for (Document d : responses) {
-							byte[] data = d.toJson().getBytes();
+							byte[] data = d.toJson().getBytes("UTF-8");
 							DatagramPacket response = new DatagramPacket(data, data.length, received.getAddress(), received.getPort());
 							ds.send(response);
 						}
