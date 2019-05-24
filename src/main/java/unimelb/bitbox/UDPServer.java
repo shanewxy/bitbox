@@ -70,9 +70,10 @@ public class UDPServer {
 						if (clientCount < MAXCONNECTIONS) {
 							Document json = (Document) Document.parse(new String(received.getData(),0,received.getLength(),"UTF-8"));
 							if (json.getString("command").equals("HANDSHAKE_REQUEST")) {
-								handleHandshake(json, incomingHostPort);
-								clientCount++;
-								System.out.println("Now we have "+rememberedPeers.toString());
+								if (handleHandshake(json, incomingHostPort)) {
+									clientCount++;
+									System.out.println("Now we have "+rememberedPeers.toString());
+								}
 							}
 						}else {
 							log.info("connections reached max, please try connecting other peers");
@@ -108,7 +109,7 @@ public class UDPServer {
 	 * @param received
 	 * @throws IOException
 	 */
-	public void handleHandshake(Document msg, HostPort realHostPort) {
+	public boolean handleHandshake(Document msg, HostPort realHostPort) {
 		// if server received a handshake request, response to the sender a
 		// handshake response
 		Document advertisedHostPortDoc = (Document) msg.get("hostPort");
@@ -128,7 +129,7 @@ public class UDPServer {
 					byte[] fakeIP = Protocol.createInvalidP("Real host address is not same as the advertised one.").getBytes("UTF-8");
 					log.info("Sent invalid protocol to: "+advertisedHostPort.toString()+" because of fake ip address");
 					ds.send(new DatagramPacket(fakeIP, fakeIP.length, InetAddress.getByName(advertisedHost), advertisedPort));
-					return;
+					return false;
 				}catch(IOException ioe) {
 					ioe.printStackTrace();
 				}
@@ -152,10 +153,12 @@ public class UDPServer {
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
+			return true;
 			
 		} catch (UnknownHostException e) {
 			// TODO Auto-generated catch block
 			log.warning(e.getMessage());
+			return false;
 		}
 		
 		
