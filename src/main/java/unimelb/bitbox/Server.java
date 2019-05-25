@@ -64,12 +64,15 @@ public class Server {
                 out.flush();
                 String command = in.readLine();
                 System.out.println(command);
-                String json = SecurityUtil.decrypt(command, secretKey);
-                System.out.println(json);
-                String resp = handleCmd(json);
-                String payload = SecurityUtil.encrypt(resp, secretKey);
-                out.write(payload);
-                out.flush();
+                if (command != null) {
+                    String json = SecurityUtil.decrypt(command, secretKey);
+                    System.out.println(json);
+                    String resp = handleCmd(json);
+                    String payload = SecurityUtil.encrypt(resp, secretKey);
+                    out.write(payload);
+                    out.flush();
+
+                }
                 socket.close();
             }
         } catch (IOException e) {

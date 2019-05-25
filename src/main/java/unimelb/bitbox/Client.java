@@ -64,7 +64,9 @@ public class Client {
             String peer = cmd.getOptionValue('p');
             HostPort hostport = new HostPort(server);
             client.initConnection(hostport, identity);
-            client.out.write(generateRequest(command, peer));
+            String request = generateRequest(command, peer);
+            System.out.println(request);
+            client.out.write(request);
             client.out.flush();
             String resp = SecurityUtil.decrypt(client.in.readLine(), secretKey);
             System.out.println(resp);
