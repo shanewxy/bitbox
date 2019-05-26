@@ -39,17 +39,21 @@ public class UDPThread extends Thread{
 			msg = new String(received.getData(),0,received.getLength(),"UTF-8");
 			if (msg != null) {
 				
-				List<Document> responses = handler.handleMsg(msg);
+				
 				try{
+					List<Document> responses = handler.handleMsg(msg);
 					if (responses !=null) {
 						for (Document d : responses) {
 							byte[] data = d.toJson().getBytes("UTF-8");
+							log.warning("Actual data length: "+data.length);
 							DatagramPacket response = new DatagramPacket(data, data.length, received.getAddress(), received.getPort());
 							ds.send(response);
 						}
 					}
 				}catch (IOException e) {
 					log.warning(e.getMessage());
+				}catch (NullPointerException npe) {
+					log.warning("caught npe when processing this msg: "+msg);
 				}
 			}
 		} catch (UnsupportedEncodingException e1) {

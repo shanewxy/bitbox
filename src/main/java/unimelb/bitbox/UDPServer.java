@@ -57,7 +57,7 @@ public class UDPServer {
 		Runnable listener = () -> {
 			try {
 				while (true) {
-					data = new byte[8192];
+					data = new byte[12000];
 					received = new DatagramPacket(data, data.length);
 					ds.receive(received); // receive packet from client
 					String incomingHost = received.getAddress().getHostAddress();
@@ -203,6 +203,7 @@ public class UDPServer {
 				HostPort hp = new HostPort(str);
 				send = new DatagramPacket(data, data.length, InetAddress.getByName(hp.host), hp.port);
 				ds.send(send);
+				log.info("Sent ***"+msg+"***to "+str);
 			} catch (UnknownHostException e1) {
 				log.warning(e1.getMessage());
 			} catch (IOException e) {

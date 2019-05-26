@@ -47,6 +47,7 @@ public class MessageHandler {
     public List<Document> handleMsg(String msg) {
         log.info("Received: " + msg); // print received message to Log
         Document json = (Document) Document.parse(msg);
+        log.warning("JSON str: "+json.toJson());
         String command = json.getString("command");
         List<Document> responses = new ArrayList<Document>();
 
@@ -342,8 +343,10 @@ public class MessageHandler {
                 buffer.flip();
                 byte[] bytes = new byte[buffer.limit()];
                 buffer.get(bytes);
+                log.warning("Sent byte array's length: "+bytes.length);
 
                 json.append("content", encoder.encodeToString(bytes));
+                log.warning("Encoded length: "+encoder.encodeToString(bytes).length());
                 message = "successful read";
                 result = true;
 

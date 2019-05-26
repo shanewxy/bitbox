@@ -21,7 +21,7 @@ public class ServerMain implements FileSystemObserver {
     private static final String MODE = Configuration.getConfigurationValue("mode");
     private static final int UDPPORT = Integer.parseInt(Configuration.getConfigurationValue("udpPort"));
     public static final int UDPTIMEOUT = Integer.parseInt(Configuration.getConfigurationValue("udpTimeOut"));
-    public static final int UDPATTEMPTS = Integer.parseInt(Configuration.getConfigurationValue("udpRetryAttempts"));
+    public static final int UDPATTEMPTS = Integer.parseInt(Configuration.getConfigurationValue("udpRetries"));
     private List<File> list;
 
     protected FileSystemManager fileSystemManager;
@@ -30,6 +30,7 @@ public class ServerMain implements FileSystemObserver {
     private MessageHandler handler;
     private UDPServer udpServer;
     private UDPClient udpClient;
+    private UDPAgent a;
 
     public ServerMain() throws NumberFormatException, IOException, NoSuchAlgorithmException {
     	
@@ -50,13 +51,14 @@ public class ServerMain implements FileSystemObserver {
         		}
         	}
 		}else if (MODE.equals("udp")) {
-			udpServer = new UDPServer(UDPPORT, handler);
-			for (String peer : PEERS) {
-				udpClient = new UDPClient(peer, handler);
-				if (udpClient.connected) {
-					break;
-				}
-			}
+//			udpServer = new UDPServer(UDPPORT, handler);
+//			for (String peer : PEERS) {
+//				udpClient = new UDPClient(peer, handler);
+//				if (udpClient.connected) {
+//					break;
+//				}
+//			}
+			a = new UDPAgent(UDPPORT, handler, PEERS);
 		}
         
     }
@@ -100,10 +102,11 @@ public class ServerMain implements FileSystemObserver {
         			peerClient.sendToServer(msg);
         		peerServer.sendToClients(msg);
 			}else if(MODE.equals("udp")){
-				udpServer.sendToClients(msg);
-				if (udpClient != null && udpClient.connected) {
-					udpClient.sendToServer(msg);
-				}
+				a.sendToPeers(msg);
+//				udpServer.sendToClients(msg);
+//				if (udpClient != null && udpClient.connected) {
+//					udpClient.sendToServer(msg);
+//				}
 				
 			}
         	
