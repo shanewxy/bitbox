@@ -17,6 +17,7 @@ import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Base64.Encoder;
 import java.util.HashMap;
+import java.util.logging.Logger;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
@@ -47,6 +48,7 @@ public class Server {
     private SecretKey secretKey;
     private MessageHandler handler;
     Socket socket;
+    private Logger log = Logger.getLogger(Server.class.getName());
 
     public Server(MessageHandler handler) {
         this.handler = handler;
@@ -57,16 +59,16 @@ public class Server {
                 out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream(), "UTF-8"));
                 in = new BufferedReader(new InputStreamReader(socket.getInputStream(), "UTF-8"));
                 String authrequest = in.readLine();
-                System.out.println(authrequest);
+                log.info(authrequest);
                 Document auth = Document.parse(authrequest);
                 String identity = auth.getString("identity");
                 out.write(generateAuthResponse(identity));
                 out.flush();
                 String command = in.readLine();
-                System.out.println(command);
+                log.info(command);
                 if (command != null) {
                     String json = SecurityUtil.decrypt(command, secretKey);
-                    System.out.println(json);
+                    log.info(json);
                     String resp = handleCmd(json);
                     String payload = SecurityUtil.encrypt(resp, secretKey);
                     out.write(payload);
@@ -76,7 +78,8 @@ public class Server {
                 socket.close();
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            log.severe(e.getMessage());
+
         }
     }
 
@@ -91,18 +94,18 @@ public class Server {
                 message = "public key found";
                 status = true;
                 try {
-                    System.out.println(pub[1]);
+                    log.info(pub[1]);
                     KeySpec spec = new SSHEncodedToRSAPublicConverter(key).convertToRSAPublicKey();
                     KeyFactory kf = KeyFactory.getInstance("RSA");
                     PublicKey pkey = kf.generatePublic(spec);
                     doc.append("AES128", encryptSecretKey(pkey));
                 } catch (NoSuchAlgorithmException e) {
-                    e.printStackTrace();
+                    log.severe(e.getMessage());
+
                 } catch (InvalidKeySpecException e) {
-                    e.printStackTrace();
+                    log.severe(e.getMessage());
                 }
             }
-
         }
         doc.append("message", message);
         doc.append("status", status);
@@ -118,21 +121,21 @@ public class Server {
             generator.init(128);
             SecretKey secretKey = generator.generateKey();
             this.secretKey = secretKey;
-            cipher = Cipher.getInstance("RSA");
+            cipher = Cipher.getInstance("RSA/ECB/NoPadding");
             cipher.init(Cipher.ENCRYPT_MODE, publicKey);
-            byte[] bytes = cipher.doFinal(secretKey.getEncoded());
+            byte[] bytes = cipher.doFinal(SecurityUtil.padAESKey(secretKey.getEncoded()));
             Encoder encoder = Base64.getEncoder();
             encoded = encoder.encodeToString(bytes);
         } catch (NoSuchAlgorithmException e) {
-            e.printStackTrace();
+            log.severe(e.getMessage());
         } catch (NoSuchPaddingException e) {
-            e.printStackTrace();
+            log.severe(e.getMessage());
         } catch (InvalidKeyException e) {
-            e.printStackTrace();
+            log.severe(e.getMessage());
         } catch (IllegalBlockSizeException e) {
-            e.printStackTrace();
+            log.severe(e.getMessage());
         } catch (BadPaddingException e) {
-            e.printStackTrace();
+            log.severe(e.getMessage());
         }
         return encoded;
     }
@@ -220,7 +223,8 @@ public class Server {
                         status = true;
                         msg = "disconnected from peer";
                     } catch (IOException e) {
-                        e.printStackTrace();
+                        log.severe(e.getMessage());
+
                     }
                 }
             }
@@ -232,7 +236,8 @@ public class Server {
                         status = true;
                         msg = "disconnected from peer";
                     } catch (IOException e) {
-                        e.printStackTrace();
+                        log.severe(e.getMessage());
+
                     }
                 }
             }

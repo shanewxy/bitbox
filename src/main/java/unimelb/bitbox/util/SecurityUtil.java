@@ -14,6 +14,8 @@ import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
 
+import org.bouncycastle.util.Arrays;
+
 import unimelb.bitbox.MessageHandler;
 
 /**
@@ -28,31 +30,30 @@ public class SecurityUtil {
         try {
             Cipher cipher = Cipher.getInstance("AES/ECB/NoPadding");
             cipher.init(Cipher.ENCRYPT_MODE, secretKey);
-            while (json.length() % 16 != 0) {
+            byte[] jsonbytes = json.getBytes("UTF-8");
+            int bytesToPad = 16 - jsonbytes.length % 16;
+            if (bytesToPad != 16) {
                 Random rdm = new Random();
-                json += rdm.nextInt();
+                byte[] bytes = new byte[bytesToPad];
+                rdm.nextBytes(bytes);
+                jsonbytes = Arrays.concatenate(jsonbytes, bytes);
             }
-            byte[] encrypted = cipher.doFinal(json.getBytes("UTF-8"));
+            byte[] encrypted = cipher.doFinal(jsonbytes);
             Encoder encoder = Base64.getEncoder();
             doc.append("payload", encoder.encodeToString(encrypted));
         } catch (InvalidKeyException e) {
-
-            e.printStackTrace();
+            log.severe(e.getMessage());
         } catch (NoSuchAlgorithmException e) {
-
-            e.printStackTrace();
+            log.severe(e.getMessage());
         } catch (NoSuchPaddingException e) {
-
-            e.printStackTrace();
+            log.severe(e.getMessage());
         } catch (IllegalBlockSizeException e) {
             log.warning(e.getMessage());
             System.exit(1);
         } catch (BadPaddingException e) {
-
-            e.printStackTrace();
+            log.severe(e.getMessage());
         } catch (UnsupportedEncodingException e) {
-
-            e.printStackTrace();
+            log.severe(e.getMessage());
         }
         return doc.toJson();
     }
@@ -61,30 +62,33 @@ public class SecurityUtil {
         String payload = Document.parse(json).getString("payload");
         String decrpted = "";
         if (payload != null) {
-
             byte[] decoded = Base64.getDecoder().decode(payload);
             try {
                 Cipher cipher = Cipher.getInstance("AES/ECB/NoPadding");
                 cipher.init(Cipher.DECRYPT_MODE, secretKey);
-                System.out.println(new String(cipher.doFinal(decoded)));
+                log.info(new String(cipher.doFinal(decoded)));
                 decrpted = new String(cipher.doFinal(decoded)).split(System.lineSeparator())[0];
             } catch (InvalidKeyException e) {
-
-                e.printStackTrace();
+                log.severe(e.getMessage());
             } catch (NoSuchAlgorithmException e) {
-
-                e.printStackTrace();
+                log.severe(e.getMessage());
             } catch (NoSuchPaddingException e) {
-
-                e.printStackTrace();
+                log.severe(e.getMessage());
             } catch (IllegalBlockSizeException e) {
-
-                e.printStackTrace();
+                log.severe(e.getMessage());
             } catch (BadPaddingException e) {
-
-                e.printStackTrace();
+                log.severe(e.getMessage());
             }
         }
         return decrpted;
+    }
+
+    public static byte[] padAESKey(byte[] keyBytes) {
+        Random rdm = new Random();
+        byte[] input = new byte[239];
+        rdm.nextBytes(input);
+        byte[] padded = Arrays.concatenate(keyBytes, input);
+        return padded;
+
     }
 }

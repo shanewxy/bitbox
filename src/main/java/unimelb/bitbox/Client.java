@@ -34,6 +34,7 @@ import org.apache.commons.cli.ParseException;
 import org.bouncycastle.openssl.PEMKeyPair;
 import org.bouncycastle.openssl.PEMParser;
 import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter;
+import org.bouncycastle.util.Arrays;
 
 import unimelb.bitbox.util.Document;
 import unimelb.bitbox.util.HostPort;
@@ -65,22 +66,23 @@ public class Client {
             String command = cmd.getOptionValue('c');
             String identity = cmd.getOptionValue('i');
             String peer = cmd.getOptionValue('p');
+            if (server == null || command == null || identity == null) {
+                log.severe("-s, -c and -i should be identified");
+                HelpFormatter formatter = new HelpFormatter();
+                formatter.printHelp("java -cp bitbox.jar unimelb.bitbox.Client -i[IDENTITY] -c [COMMAND] -s [SERVER] -p [PEER]", options);
+            }
             HostPort hostport = new HostPort(server);
             client.initConnection(hostport, identity);
             String request = generateRequest(command, peer);
-            System.out.println(request);
+            log.info(request);
             client.out.write(request);
             client.out.flush();
             String resp = SecurityUtil.decrypt(client.in.readLine(), secretKey);
-            System.out.println(resp);
-        } catch (NullPointerException e) {
-            log.severe("-s, -c and -i should be identified");
-            HelpFormatter formatter = new HelpFormatter();
-            formatter.printHelp("java -cp bitbox.jar unimelb.bitbox.Client -i[IDENTITY] -c [COMMAND] -s [SERVER] -p [PEER]", options);
+            log.info(resp);
         } catch (ParseException e) {
             log.severe(e.getMessage());
         } catch (IOException e) {
-            e.printStackTrace();
+            log.severe(e.getMessage());
         }
     }
 
@@ -92,14 +94,12 @@ public class Client {
             out.write(Protocol.CreateAuthRequest(identity));
             out.flush();
             String secretKey = in.readLine();
-            System.out.println(secretKey);
+            log.info(secretKey);
             getSecretKey(secretKey);
         } catch (UnknownHostException e) {
-
-            e.printStackTrace();
+            log.severe(e.getMessage());
         } catch (IOException e) {
-
-            e.printStackTrace();
+            log.severe(e.getMessage());
         }
     }
 
@@ -116,24 +116,19 @@ public class Client {
         byte[] encrypted = decoder.decode(encoded);
         PrivateKey privateKey = readPrivateKey("bitboxclient_rsa");
         try {
-            Cipher cipher = Cipher.getInstance("RSA");
+            Cipher cipher = Cipher.getInstance("RSA/ECB/NoPadding");
             cipher.init(Cipher.DECRYPT_MODE, privateKey);
-            secretKey = new SecretKeySpec(cipher.doFinal(encrypted), "AES");
+            secretKey = new SecretKeySpec(Arrays.copyOfRange(cipher.doFinal(encrypted), 1, 17), "AES");
         } catch (IllegalBlockSizeException e) {
-
-            e.printStackTrace();
+            log.severe(e.getMessage());
         } catch (BadPaddingException e) {
-
-            e.printStackTrace();
+            log.severe(e.getMessage());
         } catch (NoSuchAlgorithmException e) {
-
-            e.printStackTrace();
+            log.severe(e.getMessage());
         } catch (NoSuchPaddingException e) {
-
-            e.printStackTrace();
+            log.severe(e.getMessage());
         } catch (InvalidKeyException e) {
-
-            e.printStackTrace();
+            log.severe(e.getMessage());
         }
 
     }
@@ -147,13 +142,12 @@ public class Client {
             pemParser = new PEMParser(new FileReader(privateKeyFile));
             Object object = pemParser.readObject();
             JcaPEMKeyConverter converter = new JcaPEMKeyConverter().setProvider("BC");
-            System.out.println("Unencrypted key - no password needed");
+            log.info("Unencrypted key - no password needed");
             kp = converter.getKeyPair((PEMKeyPair) object);
         } catch (FileNotFoundException e) {
-            e.printStackTrace();
+            log.severe(e.getMessage());
         } catch (IOException e) {
-
-            e.printStackTrace();
+            log.severe(e.getMessage());
         }
         return kp.getPrivate();
 

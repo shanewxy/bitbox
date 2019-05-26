@@ -36,10 +36,6 @@ public class SSHEncodedToRSAPublicConverter {
         }
     }
 
-    public SSHEncodedToRSAPublicConverter(byte[] data) {
-        this.supplier = ByteSource.wrap(data);
-    }
-
     /**
      * Converts an SSH public key to a x.509 compliant format RSA public key spec
      * Source:
