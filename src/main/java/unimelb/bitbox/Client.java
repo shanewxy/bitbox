@@ -17,6 +17,7 @@ import java.security.PrivateKey;
 import java.security.Security;
 import java.util.Base64;
 import java.util.Base64.Decoder;
+import java.util.logging.Logger;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
@@ -27,6 +28,7 @@ import javax.crypto.spec.SecretKeySpec;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.DefaultParser;
+import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.bouncycastle.openssl.PEMKeyPair;
@@ -47,6 +49,7 @@ public class Client {
     protected Socket socket;
     private static final String RSA_FILE = "bitboxclient_rsa";
     private static SecretKeySpec secretKey;
+    private static Logger log = Logger.getLogger(Client.class.getName());
 
     public static void main(String[] args) {
         Client client = new Client();
@@ -70,9 +73,12 @@ public class Client {
             client.out.flush();
             String resp = SecurityUtil.decrypt(client.in.readLine(), secretKey);
             System.out.println(resp);
+        } catch (NullPointerException e) {
+            log.severe("-s, -c and -i should be identified");
+            HelpFormatter formatter = new HelpFormatter();
+            formatter.printHelp("java -cp bitbox.jar unimelb.bitbox.Client -i[IDENTITY] -c [COMMAND] -s [SERVER] -p [PEER]", options);
         } catch (ParseException e) {
-
-            e.printStackTrace();
+            log.severe(e.getMessage());
         } catch (IOException e) {
             e.printStackTrace();
         }
