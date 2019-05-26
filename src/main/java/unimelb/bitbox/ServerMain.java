@@ -18,7 +18,6 @@ public class ServerMain implements FileSystemObserver {
     private static Logger log = Logger.getLogger(ServerMain.class.getName());
     private static final int PORT = Integer.parseInt(Configuration.getConfigurationValue("port"));
     public static final String[] PEERS = Configuration.getConfigurationValue("peers").split(",");
-    private static final int SYNCINTERVAL = Integer.parseInt(Configuration.getConfigurationValue("syncInterval"));
     private static final String PATH = Configuration.getConfigurationValue("path");
     private List<File> list;
 
@@ -87,7 +86,7 @@ public class ServerMain implements FileSystemObserver {
                 tCPClient.sendToServer(msg);
             tCPServer.sendToClients(msg);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.warning(e.getMessage());
         }
     }
 

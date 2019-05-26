@@ -5,8 +5,8 @@ import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
 import java.util.Base64.Encoder;
-import java.util.logging.Logger;
 import java.util.Random;
+import java.util.logging.Logger;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
@@ -15,8 +15,6 @@ import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
 
 import org.bouncycastle.util.Arrays;
-
-import unimelb.bitbox.MessageHandler;
 
 /**
  * @author: Xueying Wang
@@ -89,6 +87,5 @@ public class SecurityUtil {
         rdm.nextBytes(input);
         byte[] padded = Arrays.concatenate(keyBytes, input);
         return padded;
-
     }
 }

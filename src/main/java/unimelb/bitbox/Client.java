@@ -114,7 +114,7 @@ public class Client {
         String encoded = msg.getString("AES128");
         Decoder decoder = Base64.getDecoder();
         byte[] encrypted = decoder.decode(encoded);
-        PrivateKey privateKey = readPrivateKey("bitboxclient_rsa");
+        PrivateKey privateKey = readPrivateKey(RSA_FILE);
         try {
             Cipher cipher = Cipher.getInstance("RSA/ECB/NoPadding");
             cipher.init(Cipher.DECRYPT_MODE, privateKey);
