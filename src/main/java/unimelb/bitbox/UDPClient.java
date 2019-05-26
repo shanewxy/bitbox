@@ -37,9 +37,9 @@ public class UDPClient implements Runnable {
 		this.targetHostPort = new HostPort(peer);
 		try {
 			this.ds = new DatagramSocket();
-			this.data = new byte[8192];
+			this.data = new byte[12000];
 			this.received = new DatagramPacket(data, data.length);
-			ds.setSoTimeout(ServerMain.UDPTIMEOUT * 1000);
+			ds.setSoTimeout(ServerMain.UDPTIMEOUT );
 
 			makeConnection();
 			
@@ -111,7 +111,7 @@ public class UDPClient implements Runnable {
 	public void run() {
 		while (true) {
 			try {
-				data = new byte[8192];
+				data = new byte[12000];
 				received = new DatagramPacket(data, data.length);
 				ds.receive(received);
 

@@ -29,7 +29,7 @@ public class UDPAgent {
 	private static final int SYNCINTERVAL = Integer.parseInt(Configuration.getConfigurationValue("syncInterval"));
 	private static final int MAXCONNECTIONS = Integer.parseInt(Configuration.getConfigurationValue("maximumIncommingConnections"));
     private static final int UDPTIMEOUT = Integer.parseInt(Configuration.getConfigurationValue("udpTimeOut"));
-    private static final int UDPATTEMPTS = Integer.parseInt(Configuration.getConfigurationValue("udpRetryAttempts"));
+    private static final int UDPATTEMPTS = Integer.parseInt(Configuration.getConfigurationValue("udpRetries"));
 	private static Logger log = Logger.getLogger(UDPServer.class.getName());
 	
 	private static HostPort localHostPort = new HostPort("localhost", Integer.parseInt(Configuration.getConfigurationValue("udpPort")));
