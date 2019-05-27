@@ -30,8 +30,7 @@ public class ServerMain implements FileSystemObserver {
     private TCPClient tcpClient;
     private TCPServer tcpServer;
     private MessageHandler handler;
-    private UDPServer udpServer;
-    private UDPClient udpClient;
+
     private UDPAgent a;
 
     public ServerMain() throws NumberFormatException, IOException, NoSuchAlgorithmException {
@@ -43,18 +42,16 @@ public class ServerMain implements FileSystemObserver {
         cancelExistFileLoader(PATH);
 
         handler = new MessageHandler(fileSystemManager);
-        
-       
-        
+
         if (MODE.equals("tcp")) {
-        	tcpServer = new TCPServer(PORT, handler);
+            tcpServer = new TCPServer(PORT, handler);
             for (String peer : PEERS) {
                 tcpClient = new TCPClient(peer, handler);
                 if (tcpClient.connected) {
                     break;
                 }
             }
-		}else if (MODE.equals("udp")) {
+        } else if (MODE.equals("udp")) {
 //			udpServer = new UDPServer(UDPPORT, handler);
 //			for (String peer : PEERS) {
 //				udpClient = new UDPClient(peer, handler);
@@ -62,11 +59,11 @@ public class ServerMain implements FileSystemObserver {
 //					break;
 //				}
 //			}
-			a = new UDPAgent(UDPPORT, handler, PEERS);
-		}
-        
+            a = new UDPAgent(UDPPORT, handler, PEERS);
+        }
+
         new Server(handler);
-        
+
     }
 
     /**
@@ -105,15 +102,15 @@ public class ServerMain implements FileSystemObserver {
     public void processFileSystemEvent(FileSystemEvent fileSystemEvent) {
         String msg = handler.toJson(fileSystemEvent);
         try {
-            
-        	if (MODE.equals("tcp")) {
-        		if (tcpClient != null && tcpClient.connected)
+
+            if (MODE.equals("tcp")) {
+                if (tcpClient != null && tcpClient.connected)
                     tcpClient.sendToServer(msg);
                 tcpServer.sendToClients(msg);
-			}else if(MODE.equals("udp")){
-				a.sendToPeers(msg);
-			}
-        	
+            } else if (MODE.equals("udp")) {
+                a.sendToPeers(msg);
+            }
+
         } catch (Exception e) {
             log.warning(e.getMessage());
         }
