@@ -116,9 +116,9 @@ public class Client {
         byte[] encrypted = decoder.decode(encoded);
         PrivateKey privateKey = readPrivateKey(RSA_FILE);
         try {
-            Cipher cipher = Cipher.getInstance("RSA/ECB/NoPadding");
+            Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
             cipher.init(Cipher.DECRYPT_MODE, privateKey);
-            secretKey = new SecretKeySpec(Arrays.copyOfRange(cipher.doFinal(encrypted), 1, 17), "AES");
+            secretKey = new SecretKeySpec(cipher.doFinal(encrypted), "AES");
         } catch (IllegalBlockSizeException e) {
             log.severe(e.getMessage());
         } catch (BadPaddingException e) {

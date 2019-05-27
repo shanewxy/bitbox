@@ -21,6 +21,13 @@ import static com.google.common.collect.Iterables.get;
 import static com.google.common.collect.Iterables.size;
 import static com.google.common.io.BaseEncoding.base64;
 
+/**
+ * Source:
+ * https://stackoverflow.com/questions/47816938/java-ssh-rsa-string-to-public-key/51048024
+ * 
+ * @author locus2k
+ *
+ */
 public class SSHEncodedToRSAPublicConverter {
 
     private static final String SSH_MARKER = "ssh-rsa";

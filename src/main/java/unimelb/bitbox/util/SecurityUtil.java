@@ -81,11 +81,11 @@ public class SecurityUtil {
         return decrpted;
     }
 
-    public static byte[] padAESKey(byte[] keyBytes) {
-        Random rdm = new Random();
-        byte[] input = new byte[239];
-        rdm.nextBytes(input);
-        byte[] padded = Arrays.concatenate(keyBytes, input);
-        return padded;
-    }
+//    public static byte[] padAESKey(byte[] keyBytes) {
+//        Random rdm = new Random();
+//        byte[] input = new byte[239];
+//        rdm.nextBytes(input);
+//        byte[] padded = Arrays.concatenate(keyBytes, input);
+//        return padded;
+//    }
 }

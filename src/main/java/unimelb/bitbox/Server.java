@@ -121,9 +121,9 @@ public class Server {
             generator.init(128);
             SecretKey secretKey = generator.generateKey();
             this.secretKey = secretKey;
-            cipher = Cipher.getInstance("RSA/ECB/NoPadding");
+            cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
             cipher.init(Cipher.ENCRYPT_MODE, publicKey);
-            byte[] bytes = cipher.doFinal(SecurityUtil.padAESKey(secretKey.getEncoded()));
+            byte[] bytes = cipher.doFinal(secretKey.getEncoded());
             Encoder encoder = Base64.getEncoder();
             encoded = encoder.encodeToString(bytes);
         } catch (NoSuchAlgorithmException e) {
@@ -184,16 +184,23 @@ public class Server {
     private Document connect(Document json) {
         String command = "CONNECT_PEER_RESPONSE";
         json.replace("command", command);
-        HostPort hp = new HostPort(json);
-        TCPClient client = new TCPClient(hp.toString(), handler);
         boolean status = false;
         String msg = null;
-        if (client.connected) {
-            status = true;
-            msg = "connected to peer";
-        } else {
+        HostPort hp = new HostPort(json);
+        HashMap<Connection, HostPort> serverConnections = TCPServer.connections;
+        HashMap<Socket, HostPort> clientConnections = TCPClient.connections;
+        if (serverConnections.containsValue(hp) || clientConnections.containsValue(hp)) {
             status = false;
-            msg = "connection failed";
+            msg = "connection has already established";
+        } else {
+            TCPClient client = new TCPClient(hp.toString(), handler);
+            if (client.connected) {
+                status = true;
+                msg = "connected to peer";
+            } else {
+                status = false;
+                msg = "connection failed";
+            }
         }
         json.append("status", status);
         json.append("message", msg);
