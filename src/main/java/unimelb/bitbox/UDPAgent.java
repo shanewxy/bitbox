@@ -35,14 +35,15 @@ public class UDPAgent {
     private static Logger log = Logger.getLogger(UDPAgent.class.getName());
 
     private static HostPort localHostPort = new HostPort(Configuration.getConfigurationValue("advertisedName"), Integer.parseInt(Configuration.getConfigurationValue("udpPort")));
-    private static HashMap<String, Integer> rememberedPeers = new HashMap<String, Integer>();
-    private static ArrayList<HostPort> candidates = new ArrayList<HostPort>();
+    public static HashMap<String, Integer> rememberedPeers = new HashMap<String, Integer>();
+    public static ArrayList<HostPort> candidates = new ArrayList<HostPort>();
 
     private DatagramSocket socket;
     private MessageHandler handler;
     private int clientCount;
+    private static UDPAgent instance;
 
-    public UDPAgent(int udpPort, MessageHandler handler, String[] peers) throws UnsupportedEncodingException {
+    private UDPAgent(int udpPort, MessageHandler handler, String[] peers) throws UnsupportedEncodingException {
 
         this.handler = handler;
         clientCount = 0;
@@ -59,7 +60,7 @@ public class UDPAgent {
 
     }
 
-    private void MakeConnections(String[] peers) throws UnsupportedEncodingException {
+    public void MakeConnections(String[] peers) throws UnsupportedEncodingException {
 
         log.info("Start connecting with provided peers...");
         for (String peer : peers) {
@@ -178,7 +179,7 @@ public class UDPAgent {
         }
         try {
             byte[] data = msg.getBytes("UTF-8");
-            DatagramPacket payload = new DatagramPacket(data, data.length, (InetAddress) null, 8888);
+            DatagramPacket payload = new DatagramPacket(data, data.length);
             log.info("Start broadcasting a message to all connected peers: " + msg);
             for (String str : rememberedPeers.keySet()) {
                 String[] hpStr = str.split(":");
@@ -204,6 +205,16 @@ public class UDPAgent {
                 log.warning(e.getMessage());
             }
         }
+    }
+
+    public static synchronized UDPAgent getInstance(int udpPort, MessageHandler handler, String[] peers) {
+        if (instance == null)
+            try {
+                instance = new UDPAgent(udpPort, handler, peers);
+            } catch (UnsupportedEncodingException e) {
+                e.printStackTrace();
+            }
+        return instance;
     }
 
     private class ProcessMessages extends Thread {

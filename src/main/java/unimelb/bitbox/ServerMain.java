@@ -20,8 +20,8 @@ public class ServerMain implements FileSystemObserver {
     public static final String[] PEERS = Configuration.getConfigurationValue("peers").split(",");
     private static final int SYNCINTERVAL = Integer.parseInt(Configuration.getConfigurationValue("syncInterval"));
     private static final String PATH = Configuration.getConfigurationValue("path");
-    private static final String MODE = Configuration.getConfigurationValue("mode");
-    private static final int UDPPORT = Integer.parseInt(Configuration.getConfigurationValue("udpPort"));
+    public static final String MODE = Configuration.getConfigurationValue("mode");
+    public static final int UDPPORT = Integer.parseInt(Configuration.getConfigurationValue("udpPort"));
     public static final int UDPTIMEOUT = Integer.parseInt(Configuration.getConfigurationValue("udpTimeOut"));
     public static final int UDPATTEMPTS = Integer.parseInt(Configuration.getConfigurationValue("udpRetries"));
     private List<File> list;
@@ -59,7 +59,7 @@ public class ServerMain implements FileSystemObserver {
 //					break;
 //				}
 //			}
-            a = new UDPAgent(UDPPORT, handler, PEERS);
+            a = UDPAgent.getInstance(UDPPORT, handler, PEERS);
         }
 
         new Server(handler);
