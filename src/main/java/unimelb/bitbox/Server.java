@@ -37,6 +37,8 @@ import unimelb.bitbox.util.SSHEncodedToRSAPublicConverter;
 import unimelb.bitbox.util.SecurityUtil;
 
 /**
+ * This class handles request from other Client
+ * 
  * @author : Xueying Wang
  */
 public class Server {
@@ -83,6 +85,12 @@ public class Server {
         }
     }
 
+    /**
+     * generate authorization response
+     * 
+     * @param identity
+     * @return response json String
+     */
     public String generateAuthResponse(String identity) {
         Document doc = new Document();
         doc.append("command", "AUTH_RESPONSE");

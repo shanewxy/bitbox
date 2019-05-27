@@ -17,11 +17,21 @@ import javax.crypto.SecretKey;
 import org.bouncycastle.util.Arrays;
 
 /**
+ * This class contains AES encryption encr and decryption methods
+ * 
  * @author: Xueying Wang
  */
 public class SecurityUtil {
     private static Logger log = Logger.getLogger(SecurityUtil.class.getName());
 
+    /**
+     * encrypt the json message using AES key, add padding after line separator.
+     * Generate new payload json message.
+     * 
+     * @param json
+     * @param secretKey
+     * @return json String with payload
+     */
     public static String encrypt(String json, SecretKey secretKey) {
         json += System.lineSeparator();
         Document doc = new Document();
@@ -56,6 +66,13 @@ public class SecurityUtil {
         return doc.toJson();
     }
 
+    /**
+     * decrypt the payload
+     * 
+     * @param json
+     * @param secretKey
+     * @return decrpted json String
+     */
     public static String decrypt(String json, SecretKey secretKey) {
         String payload = Document.parse(json).getString("payload");
         String decrpted = "";
