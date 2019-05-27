@@ -29,7 +29,7 @@ public class MessageHandler {
     private static final Long BLOCKSIZE = Long.parseLong(Configuration.getConfigurationValue("blockSize"));
     private static Logger log = Logger.getLogger(MessageHandler.class.getName());
 
-    FileSystemManager fileSystemManager;
+    public FileSystemManager fileSystemManager;
 
     public MessageHandler(FileSystemManager fileSystemManager) {
         this.fileSystemManager = fileSystemManager;
