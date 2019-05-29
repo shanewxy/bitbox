@@ -41,7 +41,7 @@ import unimelb.bitbox.util.SSHEncodedToRSAPublicConverter;
 import unimelb.bitbox.util.SecurityUtil;
 
 /**
- * This class handles request from other Client
+ * This class handles request from other Clients
  * 
  * @author : Xueying Wang
  */
