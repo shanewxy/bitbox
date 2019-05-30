@@ -11,7 +11,6 @@ import unimelb.bitbox.util.HostPort;
  * @author Kiwilyc
  */
 public class Protocol {
-
     public static String createInvalidP(String wrongMsg) {
         Document doc = new Document();
 

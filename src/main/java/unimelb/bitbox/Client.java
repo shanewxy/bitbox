@@ -86,6 +86,13 @@ public class Client {
         }
     }
 
+    /**
+     * create socket to connect to the Peer, send authorization request to the Peer,
+     * and get the secret key.
+     * 
+     * @param hostport the server to connect to
+     * @param identity identity of the client itself
+     */
     private void initConnection(HostPort hostport, String identity) {
         try {
             socket = new Socket(hostport.host, hostport.port);
@@ -133,6 +140,11 @@ public class Client {
 
     }
 
+    /**
+     * read the private key from bitboxclient_rsa
+     * @param privateKeyFileName
+     * @return PrivateKey object
+     */
     private PrivateKey readPrivateKey(String privateKeyFileName) {
         Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
         File privateKeyFile = new File(privateKeyFileName); // private key file in PEM format
@@ -153,6 +165,12 @@ public class Client {
 
     }
 
+    /**
+     * generate json String of the request
+     * @param command
+     * @param peer peer to connect or disconnect.
+     * @return json string
+     */
     public static String generateRequest(String command, String peer) {
         Document json = new Document();
         String cmd = null;

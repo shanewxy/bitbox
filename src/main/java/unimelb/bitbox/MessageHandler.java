@@ -26,7 +26,7 @@ public class MessageHandler {
         FILE_MODIFY_RESPONSE, DIRECTORY_CREATE_REQUEST, DIRECTORY_CREATE_RESPONSE, DIRECTORY_DELETE_REQUEST, DIRECTORY_DELETE_RESPONSE, FILE_BYTES_REQUEST, FILE_BYTES_RESPONSE
     }
 
-    private static final Long BLOCKSIZE = Long.parseLong(Configuration.getConfigurationValue("blockSize"));
+    private static final Long BLOCKSIZE = Math.min(Long.parseLong(Configuration.getConfigurationValue("blockSize")),8192);
     private static Logger log = Logger.getLogger(MessageHandler.class.getName());
 
     public FileSystemManager fileSystemManager;
@@ -47,6 +47,7 @@ public class MessageHandler {
     public List<Document> handleMsg(String msg) {
         log.info("Received: " + msg); // print received message to Log
         Document json = (Document) Document.parse(msg);
+        log.warning("JSON str: "+json.toJson());
         String command = json.getString("command");
         List<Document> responses = new ArrayList<Document>();
 
@@ -342,8 +343,10 @@ public class MessageHandler {
                 buffer.flip();
                 byte[] bytes = new byte[buffer.limit()];
                 buffer.get(bytes);
+                log.warning("Sent byte array's length: "+bytes.length);
 
                 json.append("content", encoder.encodeToString(bytes));
+                log.warning("Encoded length: "+encoder.encodeToString(bytes).length());
                 message = "successful read";
                 result = true;
 

@@ -18,13 +18,20 @@ public class ServerMain implements FileSystemObserver {
     private static Logger log = Logger.getLogger(ServerMain.class.getName());
     private static final int PORT = Integer.parseInt(Configuration.getConfigurationValue("port"));
     public static final String[] PEERS = Configuration.getConfigurationValue("peers").split(",");
+    private static final int SYNCINTERVAL = Integer.parseInt(Configuration.getConfigurationValue("syncInterval"));
     private static final String PATH = Configuration.getConfigurationValue("path");
+    public static final String MODE = Configuration.getConfigurationValue("mode");
+    public static final int UDPPORT = Integer.parseInt(Configuration.getConfigurationValue("udpPort"));
+    public static final int UDPTIMEOUT = Integer.parseInt(Configuration.getConfigurationValue("udpTimeOut"));
+    public static final int UDPATTEMPTS = Integer.parseInt(Configuration.getConfigurationValue("udpRetries"));
     private List<File> list;
 
     protected FileSystemManager fileSystemManager;
-    private TCPClient tCPClient;
-    private TCPServer tCPServer;
+    private TCPClient tcpClient;
+    private TCPServer tcpServer;
     private MessageHandler handler;
+
+    private UDPAgent a;
 
     public ServerMain() throws NumberFormatException, IOException, NoSuchAlgorithmException {
 
@@ -35,13 +42,26 @@ public class ServerMain implements FileSystemObserver {
         cancelExistFileLoader(PATH);
 
         handler = new MessageHandler(fileSystemManager);
-        tCPServer = new TCPServer(PORT, handler);
-        for (String peer : PEERS) {
-            tCPClient = new TCPClient(peer, handler);
-            if (tCPClient.connected) {
-                break;
+
+        if (MODE.equals("tcp")) {
+            tcpServer = new TCPServer(PORT, handler);
+            for (String peer : PEERS) {
+                tcpClient = new TCPClient(peer, handler);
+                if (tcpClient.connected) {
+                    break;
+                }
             }
+        } else if (MODE.equals("udp")) {
+//			udpServer = new UDPServer(UDPPORT, handler);
+//			for (String peer : PEERS) {
+//				udpClient = new UDPClient(peer, handler);
+//				if (udpClient.connected) {
+//					break;
+//				}
+//			}
+            a = UDPAgent.getInstance(UDPPORT, handler, PEERS);
         }
+
         new Server(handler);
 
     }
@@ -82,9 +102,15 @@ public class ServerMain implements FileSystemObserver {
     public void processFileSystemEvent(FileSystemEvent fileSystemEvent) {
         String msg = handler.toJson(fileSystemEvent);
         try {
-            if (tCPClient != null && tCPClient.connected)
-                tCPClient.sendToServer(msg);
-            tCPServer.sendToClients(msg);
+
+            if (MODE.equals("tcp")) {
+                if (tcpClient != null && tcpClient.connected)
+                    tcpClient.sendToServer(msg);
+                tcpServer.sendToClients(msg);
+            } else if (MODE.equals("udp")) {
+                a.sendToPeers(msg);
+            }
+
         } catch (Exception e) {
             log.warning(e.getMessage());
         }
