@@ -45,9 +45,8 @@ public class MessageHandler {
      *         command
      */
     public List<Document> handleMsg(String msg) {
-        log.info("Received: " + msg); // print received message to Log
+        log.info("Handler Received: " + msg); // print received message to Log
         Document json = (Document) Document.parse(msg);
-        log.warning("JSON str: "+json.toJson());
         String command = json.getString("command");
         List<Document> responses = new ArrayList<Document>();
 

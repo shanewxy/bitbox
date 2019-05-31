@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
 
 import unimelb.bitbox.util.Configuration;
@@ -26,6 +27,7 @@ import unimelb.bitbox.util.Protocol;
  * handshake process) are able to communicate with the local peer.
  * 
  * @author Kiwilyc
+ * @author Xueying Wang
  *
  */
 public class UDPAgent {
@@ -38,7 +40,8 @@ public class UDPAgent {
     private static HostPort localHostPort = new HostPort(Configuration.getConfigurationValue("advertisedName"), Integer.parseInt(Configuration.getConfigurationValue("udpPort")));
     public static HashMap<String, Integer> rememberedPeers = new HashMap<String, Integer>();
     public static ArrayList<HostPort> candidates = new ArrayList<HostPort>();
-    private Map<HostPort, List<String>> responseStatus = new HashMap();
+//    private Map<HostPort, List<String>> responseStatus = new HashMap();
+    private Map<String, ArrayList<String>> timeoutCollections = new ConcurrentHashMap<String, ArrayList<String>>();
     private DatagramSocket socket;
     private MessageHandler handler;
     private int clientCount;
@@ -54,6 +57,19 @@ public class UDPAgent {
         } catch (SocketException se) {
             log.warning("Failed to create Datagram Socket: " + se.getStackTrace());
         }
+        
+        // Adding peers of the peer list into the rememberedPeer HashMap
+        for (String peer : peers) {
+        	String[] hpStr = peer.split(":");
+        	try {
+				rememberedPeers.put(new HostPort(InetAddress.getByName(hpStr[0]).getHostAddress(), Integer.parseInt(hpStr[1])).toString(), -1);
+			} catch (NumberFormatException e) {
+				log.warning("Invalid hostport when adding peers of the provided peer list");
+			} catch (UnknownHostException e) {
+				e.printStackTrace();
+			}
+        }
+        
         new Thread(() -> receiveMsg()).start();
         log.info("Start receiving messages thread...");
 
@@ -64,22 +80,32 @@ public class UDPAgent {
     public boolean makeConnections(String[] peers) throws UnsupportedEncodingException {
         boolean status = false;
         log.info("Start connecting with provided peers...");
+        Document hsRequest = Document.parse(Protocol.createHandshakeRequestP(localHostPort));
+        byte[] data = hsRequest.toJson().getBytes("UTF-8");
+        DatagramPacket payload = new DatagramPacket(data, data.length);
         for (String peer : peers) {
-            HostPort targetHostPort = new HostPort(peer);
-            byte[] hsRequest = Protocol.createHandshakeRequestP(localHostPort).getBytes("UTF-8");
+        	String[] hpStr = peer.split(":");
             try {
-                status = sendToPeer(Protocol.createHandshakeRequestP(localHostPort), targetHostPort);
-//                socket.send(new DatagramPacket(hsRequest, hsRequest.length, InetAddress.getByName(targetHostPort.host), targetHostPort.port));
-                rememberedPeers.put(new HostPort(InetAddress.getByName(targetHostPort.host).getHostAddress(), targetHostPort.port).toString(), -1);
-//                new Thread(() -> broadcastSyncEvents()).start();
-                log.info("Start synchronized events broadcasting thread...");
+            	HostPort targetHostPort = new HostPort(InetAddress.getByName(hpStr[0]).getHostAddress(), Integer.parseInt(hpStr[1]));
+				payload.setAddress(InetAddress.getByName(targetHostPort.host));
+				payload.setPort(targetHostPort.port);
+                status = reliableSend(hsRequest, payload, targetHostPort.toString());
+                if(status) {
+                	HostPort newHostPort = new HostPort(targetHostPort.host, targetHostPort.port);
+                    rememberedPeers.put(newHostPort.toString(), -1);
+                    candidates.add(newHostPort);
+//                    new Thread(() -> broadcastSyncEvents()).start();
+//                    log.info("Start synchronized events broadcasting thread...");
+                    break;
+                }
             } catch (UnknownHostException e) {
-                // TODO Auto-generated catch block
                 e.printStackTrace();
             } catch (IOException e) {
-                // TODO Auto-generated catch block
                 e.printStackTrace();
             }
+        }
+        if(!status) {
+        	log.warning("Failed to connect with any peer in the list: "+peers.toString());
         }
         return status;
     }
@@ -95,15 +121,15 @@ public class UDPAgent {
                 String json = new String(payload.getData(), 0, payload.getLength(), "UTF-8");
                 Document messageDoc = (Document) Document.parse(json);
                 String command = messageDoc.getString("command");
-                if (command.endsWith("_RESPONSE")) {
-                    for (HostPort hp : responseStatus.keySet()) {
-                        if (hp.equals(incomingHP)) {
-                            List<String> list = responseStatus.get(hp);
-                            String replace = command.replace("_RESPONSE", "");
-                            list.remove(replace);
-                        }
-                    }
-                }
+//                if (command.endsWith("_RESPONSE")) {
+//                    for (HostPort hp : responseStatus.keySet()) {
+//                        if (hp.equals(incomingHP)) {
+//                            List<String> list = responseStatus.get(hp);
+//                            String replace = command.replace("_RESPONSE", "");
+//                            list.remove(replace);
+//                        }
+//                    }
+//                }
 
                 if (rememberedPeers.get(incomingHP.toString()) != null) {
                     new ProcessMessages(payload).start();
@@ -127,12 +153,6 @@ public class UDPAgent {
                         }
                     }
                 }
-//				if (rememberedPeers.get(incomingHP.toString()) != null || clientCount < MAXCONNECTIONS) {
-//					new ProcessMessages(payload).start();
-//				}else {
-//					// If the peer of this incoming packet hasn't been remembered and the local maximum connection limitation is hit, ignore it
-//					continue;
-//				}
 
             } catch (IOException e) {
                 log.warning("Exception when receiving messages: " + e.getMessage());
@@ -202,6 +222,7 @@ public class UDPAgent {
                 payload.setAddress(InetAddress.getByName(hpStr[0]));
                 payload.setPort(Integer.parseInt(hpStr[1]));
                 socket.send(payload);
+//            	reliableSend(Document.parse(msg), payload, str);
             }
         } catch (IOException ioe) {
             log.warning("Exception when broadcasting messages: " + ioe.getStackTrace());
@@ -233,61 +254,113 @@ public class UDPAgent {
         return instance;
     }
 
-    public boolean sendToPeer(String msg, HostPort hp) {
-        boolean status = false;
-        int attempts = 1;
-        try {
-            InetAddress address = InetAddress.getByName(hp.host);
-            byte[] bytesMsg = msg.getBytes();
-            DatagramPacket packet = new DatagramPacket(bytesMsg, bytesMsg.length, address, hp.port);
-            List<String> requests = responseStatus.getOrDefault(hp, new ArrayList());
-            String rawMsg = Document.parse(msg).getString("command").replace("_REQUEST", "");
-            requests.add(rawMsg);
-            hp = new HostPort(address.getHostAddress(), hp.port);
-            responseStatus.put(hp, requests);
-            while (responseStatus.get(hp).contains(rawMsg) && attempts <= UDPATTEMPTS) {
-                log.info(msg + "trying no." + attempts++);
-                socket.send(packet);
+//    public boolean sendToPeer(String msg, HostPort hp) {
+//        boolean status = false;
+//        int attempts = 1;
+//        try {
+//            InetAddress address = InetAddress.getByName(hp.host);
+//            byte[] bytesMsg = msg.getBytes("UTF-8");
+//            DatagramPacket packet = new DatagramPacket(bytesMsg, bytesMsg.length, address, hp.port);
+//            @SuppressWarnings("unchecked")
+//			List<String> requests = responseStatus.getOrDefault(hp, new ArrayList());
+//            String rawMsg = Document.parse(msg).getString("command").replace("_REQUEST", "");
+//            requests.add(rawMsg);
+//            hp = new HostPort(address.getHostAddress(), hp.port);
+//            responseStatus.put(hp, requests);
+//            while (responseStatus.get(hp).contains(rawMsg) && attempts <= UDPATTEMPTS) {
+//                log.info(msg + "trying no." + attempts++);
+//                socket.send(packet);
+//                Thread.sleep(UDPTIMEOUT);
+//            }
+//            if (attempts > UDPATTEMPTS)
+//                log.warning("peer failed");
+//            else {
+//                log.info(msg + " sent successfully");
+//                status = true;
+//            }
+//        } catch (UnknownHostException e) {
+//            e.printStackTrace();
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        } catch (InterruptedException e) {
+//            e.printStackTrace();
+//        }
+//        return status;
+//
+//    }
+    
+    private String ExtractFeature(Document request) {
+    	String command = request.getString("command");
+    	String feature = "";
+    	if(command.contains("FILE")) {
+    		Document fileDescriptor = (Document) request.get("fileDescriptor");
+    		feature = fileDescriptor.toJson() + "^" + request.getString("pathName");
+    	}else if(command.contains("DIRECTORY")) {
+    		feature = request.getString("pathName");
+    	}else if(command.contains("HANDSHAKE")) {
+    		feature = "HANDSHAKE";
+    	}
+    	return feature;
+    }
+    
+    private boolean reliableSend(Document doc, DatagramPacket payload, String targetHPStr) throws UnsupportedEncodingException {
+    	boolean status = true;
+		log.info("I am sending a request <<"+doc.toJson()+">> to peer: "+targetHPStr);
+		String feature = ExtractFeature(doc);
+		ArrayList<String> oldList;
+		ArrayList<String> newList = new ArrayList<String>(1);
+		ArrayList<String> updateList;
+		while(true) {
+			oldList = timeoutCollections.get(targetHPStr);
+			if(oldList == null) {
+				newList.add(feature);
+    			if (timeoutCollections.putIfAbsent(targetHPStr, newList) == null) {
+    				break;
+    			}
+			}else {
+				updateList = new ArrayList<String>(oldList);
+				updateList.add(feature);
+				if (timeoutCollections.replace(targetHPStr, oldList, updateList)) {
+					break;
+				}
+			}
+		}
+        byte[] data = doc.toJson().getBytes("UTF-8");
+        payload.setData(data);
+        payload.setLength(data.length);
+        int attempts = 0;
+        do {
+            attempts ++;
+            try {
+                socket.send(payload);
+                log.info("Sent request to : " + doc.toJson() + "=> attemps" + attempts);
                 Thread.sleep(UDPTIMEOUT);
-            }
-            if (attempts > UDPATTEMPTS)
-                log.warning("peer failed");
-            else {
-                log.info(msg + " sent successfully");
-                status = true;
-            }
-        } catch (UnknownHostException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
+            }catch (IOException ioe) {
+            	log.warning("Exception when sending a request:"+ioe.getStackTrace());
+            } catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+        } while(timeoutCollections.get(targetHPStr).contains(feature) || attempts < UDPATTEMPTS);
+        if (attempts == UDPATTEMPTS) {
+        	log.warning("Failed to send request");
+        	status = false;
         }
         return status;
-
     }
 
     private class ProcessMessages extends Thread {
 
         private String msg;
-        private boolean emptySlots = true;
         private HostPort targetHP;
-//		private String targetIP;
-//		private int targetPort;
-//		private InetAddress targetInetAddress;
+        private String targetHPStr;
         private DatagramPacket payload;
 
         private ProcessMessages(DatagramPacket payload) {
 
             this.payload = payload;
 
-//			this.targetPort = payload.getPort();
-//			this.targetInetAddress = payload.getAddress();
-//			this.targetIP = this.targetInetAddress.getHostAddress();
             targetHP = new HostPort(payload.getAddress().getHostAddress(), payload.getPort());
-            if (clientCount == MAXCONNECTIONS) {
-                emptySlots = false;
-            }
+            targetHPStr = targetHP.toString();
             try {
                 msg = new String(payload.getData(), 0, payload.getLength(), "UTF-8");
                 log.info("Start processing: " + msg);
@@ -296,13 +369,13 @@ public class UDPAgent {
                 e.printStackTrace();
             }
         }
+        
+
 
         @Override
         public void run() {
 
             if (Document.parse(msg).get("command").equals("HANDSHAKE_REQUEST")) {
-//				payload.setData(buf);
-//				socket.send(new DatagramPacket(handShakeResp, handShakeResp.length, InetAddress.getByName(realHostPort.host), realHostPort.port));
                 byte[] handShakeResp;
                 try {
                     handShakeResp = Protocol.createHandshakeResponseP(localHostPort).getBytes("UTF-8");
@@ -311,28 +384,40 @@ public class UDPAgent {
                     socket.send(payload);
                     return;
                 } catch (UnsupportedEncodingException uee) {
-                    // TODO Auto-generated catch block
                     uee.printStackTrace();
                 } catch (IOException ioe) {
-                    // TODO Auto-generated catch block
                     ioe.printStackTrace();
                 }
             }
             if (msg != null) {
-
+            	Document doc = Document.parse(msg);
+            	if (doc.getString("command").contains("RESPONSE")) {
+            		String feature = ExtractFeature(doc);
+            		try {
+            			if (timeoutCollections.get(targetHPStr).remove(feature)) {
+            				log.info("Successfully recieved a corresponding response");
+            			}
+            		}catch(NullPointerException npe) {
+            			log.info("Nothing here");
+            		}
+            	}
                 List<Document> responses = handler.handleMsg(msg);
                 try {
                     if (responses != null) {
                         for (Document d : responses) {
-                            byte[] data = d.toJson().getBytes("UTF-8");
-                            payload.setData(data);
-                            payload.setLength(data.length);
-                            socket.send(payload);
-                            log.info("Sent responce: " + d.toJson());
+                        	if (d.getString("command").contains("REQUEST")) {
+                        		reliableSend(d, payload, targetHPStr);
+                        	}else {
+                                byte[] data = d.toJson().getBytes("UTF-8");
+                                payload.setData(data);
+                                payload.setLength(data.length);
+                                socket.send(payload);
+                                log.info("Sent response: " + d.toJson());
+                        	}
                         }
                     }
                 } catch (IOException e) {
-                    log.warning("Exception when sending packet: " + e.getMessage());
+                    log.warning("Exception when sending packet: " + e.getStackTrace());
                 }
             }
         }
