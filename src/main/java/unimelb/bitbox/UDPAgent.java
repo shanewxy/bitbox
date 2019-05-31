@@ -26,8 +26,9 @@ import unimelb.bitbox.util.Protocol;
  * However, only those remembered peers(which successfully passed through the
  * handshake process) are able to communicate with the local peer.
  * 
- * @author Kiwilyc
+ * @author Kedi Peng
  * @author Xueying Wang
+ * @author Yichen Liu
  *
  */
 public class UDPAgent {
@@ -333,17 +334,23 @@ public class UDPAgent {
             attempts ++;
             try {
                 socket.send(payload);
-                log.info("Sent request to : " + doc.toJson() + "=> attemps" + attempts);
+                log.info("Sent request to : " + doc.toJson() + " => attempt " + attempts);
                 Thread.sleep(UDPTIMEOUT);
             }catch (IOException ioe) {
             	log.warning("Exception when sending a request:"+ioe.getStackTrace());
             } catch (InterruptedException e) {
 				e.printStackTrace();
 			}
-        } while(timeoutCollections.get(targetHPStr).contains(feature) || attempts < UDPATTEMPTS);
-        if (attempts == UDPATTEMPTS) {
-        	log.warning("Failed to send request");
-        	status = false;
+            if(!timeoutCollections.get(targetHPStr).contains(feature)) {
+            	status = true;
+            	break;
+            }
+            status = false;
+        	log.warning("Failed to send request (attempt "+attempts+")...");
+        } while(attempts < UDPATTEMPTS);
+        if(!status) {
+        	timeoutCollections.get(targetHPStr).remove(feature);
+        	log.severe("All "+UDPATTEMPTS+" attempts failed");
         }
         return status;
     }
