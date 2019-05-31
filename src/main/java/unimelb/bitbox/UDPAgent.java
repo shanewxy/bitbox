@@ -70,8 +70,11 @@ public class UDPAgent {
             try {
                 status = sendToPeer(Protocol.createHandshakeRequestP(localHostPort), targetHostPort);
 //                socket.send(new DatagramPacket(hsRequest, hsRequest.length, InetAddress.getByName(targetHostPort.host), targetHostPort.port));
-                rememberedPeers.put(new HostPort(InetAddress.getByName(targetHostPort.host).getHostAddress(), targetHostPort.port).toString(), -1);
-//                new Thread(() -> broadcastSyncEvents()).start();
+                HostPort hostPort = new HostPort(InetAddress.getByName(targetHostPort.host).getHostAddress(), targetHostPort.port);
+                rememberedPeers.put(hostPort.toString(), -1);
+                if (status)
+                    candidates.add(hostPort);
+                new Thread(() -> broadcastSyncEvents()).start();
                 log.info("Start synchronized events broadcasting thread...");
             } catch (UnknownHostException e) {
                 // TODO Auto-generated catch block

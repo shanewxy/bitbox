@@ -8,6 +8,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
+import java.net.InetAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.security.InvalidKeyException;
@@ -142,6 +143,7 @@ public class Client {
 
     /**
      * read the private key from bitboxclient_rsa
+     * 
      * @param privateKeyFileName
      * @return PrivateKey object
      */
@@ -167,8 +169,9 @@ public class Client {
 
     /**
      * generate json String of the request
+     * 
      * @param command
-     * @param peer peer to connect or disconnect.
+     * @param peer    peer to connect or disconnect.
      * @return json string
      */
     public static String generateRequest(String command, String peer) {
@@ -181,13 +184,21 @@ public class Client {
         case "connect_peer":
             cmd = "CONNECT_PEER_REQUEST";
             HostPort hp = new HostPort(peer);
-            json.append("host", hp.host);
+            try {
+                json.append("host", InetAddress.getByName(hp.host).getHostAddress());
+            } catch (UnknownHostException e) {
+                e.printStackTrace();
+            }
             json.append("port", hp.port);
             break;
         case "disconnect_peer":
             cmd = "DISCONNECT_PEER_REQUEST";
             HostPort h = new HostPort(peer);
-            json.append("host", h.host);
+            try {
+                json.append("host", InetAddress.getByName(h.host).getHostAddress());
+            } catch (UnknownHostException e) {
+                e.printStackTrace();
+            }
             json.append("port", h.port);
             break;
         }
