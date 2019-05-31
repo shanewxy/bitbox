@@ -125,6 +125,13 @@ public class Server {
 
     }
 
+    /**
+     * generate a secret key and encrypt it with the public key of the client.
+     * Return the Base64 encoded String.
+     * 
+     * @param publicKey
+     * @return base64 encoded string
+     */
     private String encryptSecretKey(PublicKey publicKey) {
         Cipher cipher;
         String encoded = null;
@@ -152,6 +159,12 @@ public class Server {
         return encoded;
     }
 
+    /**
+     * handle one of the three commands. Generate response json String.
+     * 
+     * @param json request
+     * @return response
+     */
     private String handleCmd(String json) {
         Document doc = Document.parse(json);
         String cmd = doc.getString("command");
