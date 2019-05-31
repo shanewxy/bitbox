@@ -10,13 +10,14 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.logging.Logger;
 
 import unimelb.bitbox.util.Configuration;
 import unimelb.bitbox.util.Document;
+import unimelb.bitbox.util.FileSystemManager.FileSystemEvent;
 import unimelb.bitbox.util.HostPort;
 import unimelb.bitbox.util.Protocol;
-import unimelb.bitbox.util.FileSystemManager.FileSystemEvent;
 
 /**
  * Unlike the TCP mode, UDP mode unifies both server and client and forms an
@@ -37,7 +38,7 @@ public class UDPAgent {
     private static HostPort localHostPort = new HostPort(Configuration.getConfigurationValue("advertisedName"), Integer.parseInt(Configuration.getConfigurationValue("udpPort")));
     public static HashMap<String, Integer> rememberedPeers = new HashMap<String, Integer>();
     public static ArrayList<HostPort> candidates = new ArrayList<HostPort>();
-
+    private Map<HostPort, List<String>> responseStatus = new HashMap();
     private DatagramSocket socket;
     private MessageHandler handler;
     private int clientCount;
@@ -60,16 +61,17 @@ public class UDPAgent {
 
     }
 
-    public void makeConnections(String[] peers) throws UnsupportedEncodingException {
-
+    public boolean makeConnections(String[] peers) throws UnsupportedEncodingException {
+        boolean status = false;
         log.info("Start connecting with provided peers...");
         for (String peer : peers) {
             HostPort targetHostPort = new HostPort(peer);
             byte[] hsRequest = Protocol.createHandshakeRequestP(localHostPort).getBytes("UTF-8");
             try {
-                socket.send(new DatagramPacket(hsRequest, hsRequest.length, InetAddress.getByName(targetHostPort.host), targetHostPort.port));
+                status = sendToPeer(Protocol.createHandshakeRequestP(localHostPort), targetHostPort);
+//                socket.send(new DatagramPacket(hsRequest, hsRequest.length, InetAddress.getByName(targetHostPort.host), targetHostPort.port));
                 rememberedPeers.put(new HostPort(InetAddress.getByName(targetHostPort.host).getHostAddress(), targetHostPort.port).toString(), -1);
-                new Thread(() -> broadcastSyncEvents()).start();
+//                new Thread(() -> broadcastSyncEvents()).start();
                 log.info("Start synchronized events broadcasting thread...");
             } catch (UnknownHostException e) {
                 // TODO Auto-generated catch block
@@ -79,6 +81,7 @@ public class UDPAgent {
                 e.printStackTrace();
             }
         }
+        return status;
     }
 
     private void receiveMsg() {
@@ -89,11 +92,23 @@ public class UDPAgent {
             try {
                 socket.receive(payload);
                 HostPort incomingHP = new HostPort(payload.getAddress().getHostAddress(), payload.getPort());
+                String json = new String(payload.getData(), 0, payload.getLength(), "UTF-8");
+                Document messageDoc = (Document) Document.parse(json);
+                String command = messageDoc.getString("command");
+                if (command.endsWith("_RESPONSE")) {
+                    for (HostPort hp : responseStatus.keySet()) {
+                        if (hp.equals(incomingHP)) {
+                            List<String> list = responseStatus.get(hp);
+                            String replace = command.replace("_RESPONSE", "");
+                            list.remove(replace);
+                        }
+                    }
+                }
+
                 if (rememberedPeers.get(incomingHP.toString()) != null) {
                     new ProcessMessages(payload).start();
                 } else {
-                    Document messageDoc = (Document) Document.parse(new String(payload.getData(), 0, payload.getLength(), "UTF-8"));
-                    if (messageDoc.getString("command").equals("HANDSHAKE_REQUEST")) {
+                    if (command.equals("HANDSHAKE_REQUEST")) {
                         if (clientCount < MAXCONNECTIONS) {
                             if (handleHandshake(new HostPort((Document) messageDoc.get("hostPort")), incomingHP)) {
                                 clientCount++;
@@ -123,6 +138,7 @@ public class UDPAgent {
                 log.warning("Exception when receiving messages: " + e.getMessage());
             }
         }
+
     }
 
     private boolean handleHandshake(HostPort advertisedHostPort, HostPort realHostPort) throws UnsupportedEncodingException {
@@ -215,6 +231,40 @@ public class UDPAgent {
                 e.printStackTrace();
             }
         return instance;
+    }
+
+    public boolean sendToPeer(String msg, HostPort hp) {
+        boolean status = false;
+        int attempts = 1;
+        try {
+            InetAddress address = InetAddress.getByName(hp.host);
+            byte[] bytesMsg = msg.getBytes();
+            DatagramPacket packet = new DatagramPacket(bytesMsg, bytesMsg.length, address, hp.port);
+            List<String> requests = responseStatus.getOrDefault(hp, new ArrayList());
+            String rawMsg = Document.parse(msg).getString("command").replace("_REQUEST", "");
+            requests.add(rawMsg);
+            hp = new HostPort(address.getHostAddress(), hp.port);
+            responseStatus.put(hp, requests);
+            while (responseStatus.get(hp).contains(rawMsg) && attempts <= UDPATTEMPTS) {
+                log.info(msg + "trying no." + attempts++);
+                socket.send(packet);
+                Thread.sleep(UDPTIMEOUT);
+            }
+            if (attempts > UDPATTEMPTS)
+                log.warning("peer failed");
+            else {
+                log.info(msg + " sent successfully");
+                status = true;
+            }
+        } catch (UnknownHostException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        return status;
+
     }
 
     private class ProcessMessages extends Thread {
