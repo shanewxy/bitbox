@@ -53,14 +53,14 @@ public class UDPAgent {
         } catch (SocketException se) {
             log.warning("Failed to create Datagram Socket: " + se.getStackTrace());
         }
-        new Thread(() -> ReceiveMsg()).start();
+        new Thread(() -> receiveMsg()).start();
         log.info("Start receiving messages thread...");
 
-        MakeConnections(peers);
+        makeConnections(peers);
 
     }
 
-    public void MakeConnections(String[] peers) throws UnsupportedEncodingException {
+    public void makeConnections(String[] peers) throws UnsupportedEncodingException {
 
         log.info("Start connecting with provided peers...");
         for (String peer : peers) {
@@ -69,7 +69,7 @@ public class UDPAgent {
             try {
                 socket.send(new DatagramPacket(hsRequest, hsRequest.length, InetAddress.getByName(targetHostPort.host), targetHostPort.port));
                 rememberedPeers.put(new HostPort(InetAddress.getByName(targetHostPort.host).getHostAddress(), targetHostPort.port).toString(), -1);
-                new Thread(() -> BroadcastSyncEvents()).start();
+                new Thread(() -> broadcastSyncEvents()).start();
                 log.info("Start synchronized events broadcasting thread...");
             } catch (UnknownHostException e) {
                 // TODO Auto-generated catch block
@@ -81,7 +81,7 @@ public class UDPAgent {
         }
     }
 
-    private void ReceiveMsg() {
+    private void receiveMsg() {
 
         while (true) {
             byte[] data = new byte[12000];
@@ -192,7 +192,7 @@ public class UDPAgent {
         }
     }
 
-    private void BroadcastSyncEvents() {
+    private void broadcastSyncEvents() {
 
         while (true) {
             log.info("Sending synchronize event to connected peer");

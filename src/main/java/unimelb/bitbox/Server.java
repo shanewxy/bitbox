@@ -224,7 +224,7 @@ public class Server {
             }
         } else if ("udp".equals(ServerMain.MODE)) {
             try {
-                UDPAgent.getInstance(ServerMain.UDPPORT, handler, ServerMain.PEERS).MakeConnections(new String[] { hp.toString() });
+                UDPAgent.getInstance(ServerMain.UDPPORT, handler, ServerMain.PEERS).makeConnections(new String[] { hp.toString() });
                 status = true;
                 msg = "connected to peer";
 
