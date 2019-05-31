@@ -95,8 +95,8 @@ public class UDPAgent {
                 	HostPort newHostPort = new HostPort(targetHostPort.host, targetHostPort.port);
                     rememberedPeers.put(newHostPort.toString(), -1);
                     candidates.add(newHostPort);
-//                    new Thread(() -> broadcastSyncEvents()).start();
-//                    log.info("Start synchronized events broadcasting thread...");
+                    new Thread(() -> broadcastSyncEvents()).start();
+                    log.info("Start synchronized events broadcasting thread...");
                     break;
                 }
             } catch (UnknownHostException e) {
@@ -139,7 +139,7 @@ public class UDPAgent {
                         if (clientCount < MAXCONNECTIONS) {
                             if (handleHandshake(new HostPort((Document) messageDoc.get("hostPort")), incomingHP)) {
                                 clientCount++;
-                                System.out.println("Now we have " + rememberedPeers.toString());
+                                log.info("Currently connected peers " + candidates.toString());
                             }
                         } else {
                             log.info("connections reached max, please try connecting other peers");
