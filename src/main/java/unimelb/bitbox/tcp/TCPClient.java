@@ -6,6 +6,7 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
+import java.net.InetAddress;
 import java.net.Socket;
 import java.net.SocketException;
 import java.net.UnknownHostException;
@@ -63,8 +64,8 @@ public class TCPClient implements Runnable {
     public TCPClient(String peer, MessageHandler handler) {
         this.handler = handler;
         targetHostPort = new HostPort(peer);
-
         try {
+            HostPort ipHp = new HostPort(InetAddress.getByName(targetHostPort.host).getHostAddress(), targetHostPort.port);
             s = new Socket(targetHostPort.host, targetHostPort.port);
             in = new BufferedReader(new InputStreamReader(s.getInputStream(), "UTF-8"));
             out = new BufferedWriter(new OutputStreamWriter(s.getOutputStream(), "UTF-8"));
@@ -72,7 +73,7 @@ public class TCPClient implements Runnable {
             log.info("Initial socketd established: " + targetHostPort.toString());
             if (initConnection(s)) {
                 connected = true;
-                connections.put(s, targetHostPort);
+                connections.put(s, ipHp);
                 new Thread(this).start();
             }
         } catch (UnknownHostException e) {

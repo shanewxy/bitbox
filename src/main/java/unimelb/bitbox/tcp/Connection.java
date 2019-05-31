@@ -6,6 +6,7 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
+import java.net.InetAddress;
 import java.net.Socket;
 import java.net.SocketException;
 import java.util.ArrayList;
@@ -68,7 +69,7 @@ public class Connection extends Thread {
                             TCPServer.clientCount.getAndIncrement();
                             out.write(Protocol.createHandshakeResponseP(TCPServer.localHostPort));
                             out.flush();
-                            TCPServer.connections.put(this, clientHostPort);
+                            TCPServer.connections.put(this, new HostPort(InetAddress.getByName(clientHostPort.host).getHostAddress(), clientHostPort.port));
 
                             this.connected = true;
 

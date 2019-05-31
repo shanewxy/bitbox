@@ -224,9 +224,18 @@ public class Server {
             }
         } else if ("udp".equals(ServerMain.MODE)) {
             try {
-                UDPAgent.getInstance(ServerMain.UDPPORT, handler, ServerMain.PEERS).makeConnections(new String[] { hp.toString() });
-                status = true;
-                msg = "connected to peer";
+                UDPAgent agent = UDPAgent.getInstance(ServerMain.UDPPORT, handler, ServerMain.PEERS);
+                if (agent.rememberedPeers.containsKey(hp.toString())) {
+                    status = false;
+                    msg = "connection has already established";
+                } else {
+
+                    status = agent.makeConnections(new String[] { hp.toString() });
+                    if (status)
+                        msg = "connected to peer";
+                    else
+                        msg = "connection failed";
+                }
 
             } catch (UnsupportedEncodingException e) {
                 e.printStackTrace();
@@ -283,14 +292,18 @@ public class Server {
             }
         } else if ("udp".equals(ServerMain.MODE)) {
             List<HostPort> udpPeers = UDPAgent.candidates;
-            if (!udpPeers.contains(h)) {
-                status = false;
-                msg = "connection not active";
-            } else {
-                udpPeers.remove(h);
-                status = true;
-                msg = "disconnected from peer";
+            int size = udpPeers.size();
+            for (int i = 0; i < size; i++) {
+                if (udpPeers.get(i).equals(h)) {
+                    udpPeers.remove(h);
+
+                    UDPAgent.rememberedPeers.remove(h.toString());
+                    status = true;
+                    msg = "disconnected from peer";
+                }
             }
+            if (!status)
+                msg = "connection not active";
         }
         json.append("status", status);
         json.append("message", msg);
