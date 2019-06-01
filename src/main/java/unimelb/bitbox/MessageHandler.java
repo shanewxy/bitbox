@@ -52,34 +52,34 @@ public class MessageHandler {
         switch (command) {
         case "FILE_DELETE_REQUEST":
             responses.add(handleFileDeleteRequest(json));
-            log.info(json.toJson());
+            log.info("Received: " + json.toJson());
             break;
         case "FILE_MODIFY_REQUEST":
             responses = handleFileModifyRequest(json);
-            log.info(json.toJson());
+            log.info("Received: " + json.toJson());
             break;
         case "DIRECTORY_CREATE_REQUEST":
             responses = handleDirCreateRequest(json);
-            log.info(json.toJson());
+            log.info("Received: " + json.toJson());
             break;
         case "DIRECTORY_DELETE_REQUEST":
             responses = handleDirDeleteRequest(json);
-            log.info(json.toJson());
+            log.info("Received: " + json.toJson());
             break;
 
         case "FILE_CREATE_REQUEST":
             responses = handleFileCreateRequest(json);
-            log.info(json.toJson());
+            log.info("Received: " + json.toJson());
             break;
 
         case "FILE_BYTES_REQUEST":
             responses = handleFileBytesRequest(json);
-            log.info(json.toJson());
+            log.info("Received: " + json.toJson());
             break;
 
         case "FILE_BYTES_RESPONSE":
             responses = handleFileBytesResponse(json);
-            log.info("Received FILE MODIFY REQUEST upon file: " + json.getString("pathName") + ": from position => " + json.getLong("position") + " with length: " + json.getLong("length"));
+            log.info("Received FILE BYTES upon file: " + json.getString("pathName") + ": from position => " + json.getLong("position") + " with length: " + json.getLong("length"));
             break;
         }
 
