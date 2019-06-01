@@ -41,7 +41,7 @@ import unimelb.bitbox.util.SSHEncodedToRSAPublicConverter;
 import unimelb.bitbox.util.SecurityUtil;
 
 /**
- * This class handles request from other Client
+ * This class handles request from other Clients
  * 
  * @author : Xueying Wang
  */
@@ -65,16 +65,16 @@ public class Server {
                 out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream(), "UTF-8"));
                 in = new BufferedReader(new InputStreamReader(socket.getInputStream(), "UTF-8"));
                 String authrequest = in.readLine();
-                log.info(authrequest);
+                log.info("received: " + authrequest);
                 Document auth = Document.parse(authrequest);
                 String identity = auth.getString("identity");
                 out.write(generateAuthResponse(identity));
                 out.flush();
                 String command = in.readLine();
-                log.info(command);
+                log.info("received: " + command);
                 if (command != null) {
                     String json = SecurityUtil.decrypt(command, secretKey);
-                    log.info(json);
+                    log.info("original message: " + json);
                     String resp = handleCmd(json);
                     String payload = SecurityUtil.encrypt(resp, secretKey);
                     out.write(payload);
@@ -106,7 +106,6 @@ public class Server {
                 message = "public key found";
                 status = true;
                 try {
-                    log.info(pub[1]);
                     KeySpec spec = new SSHEncodedToRSAPublicConverter(key).convertToRSAPublicKey();
                     KeyFactory kf = KeyFactory.getInstance("RSA");
                     PublicKey pkey = kf.generatePublic(spec);
@@ -125,6 +124,13 @@ public class Server {
 
     }
 
+    /**
+     * generate a secret key and encrypt it with the public key of the client.
+     * Return the Base64 encoded String.
+     * 
+     * @param publicKey
+     * @return base64 encoded string
+     */
     private String encryptSecretKey(PublicKey publicKey) {
         Cipher cipher;
         String encoded = null;
@@ -152,6 +158,12 @@ public class Server {
         return encoded;
     }
 
+    /**
+     * handle one of the three commands. Generate response json String.
+     * 
+     * @param json request
+     * @return response
+     */
     private String handleCmd(String json) {
         Document doc = Document.parse(json);
         String cmd = doc.getString("command");
@@ -224,9 +236,18 @@ public class Server {
             }
         } else if ("udp".equals(ServerMain.MODE)) {
             try {
-                UDPAgent.getInstance(ServerMain.UDPPORT, handler, ServerMain.PEERS).MakeConnections(new String[] { hp.toString() });
-                status = true;
-                msg = "connected to peer";
+                UDPAgent agent = UDPAgent.getInstance(ServerMain.UDPPORT, handler, ServerMain.PEERS);
+                if (agent.candidates.contains(hp)) {
+                    status = false;
+                    msg = "connection has already established";
+                } else  {
+
+                    status = agent.makeConnections(new String[] { hp.toString() });
+                    if (status)
+                        msg = "connected to peer";
+                    else
+                        msg = "connection failed";
+                }
 
             } catch (UnsupportedEncodingException e) {
                 e.printStackTrace();
@@ -283,14 +304,18 @@ public class Server {
             }
         } else if ("udp".equals(ServerMain.MODE)) {
             List<HostPort> udpPeers = UDPAgent.candidates;
-            if (!udpPeers.contains(h)) {
-                status = false;
-                msg = "connection not active";
-            } else {
-                udpPeers.remove(h);
-                status = true;
-                msg = "disconnected from peer";
+            int size = udpPeers.size();
+            for (int i = 0; i < size; i++) {
+                if (udpPeers.get(i).equals(h)) {
+                    udpPeers.remove(h);
+
+                    UDPAgent.rememberedPeers.remove(h.toString());
+                    status = true;
+                    msg = "disconnected from peer";
+                }
             }
+            if (!status)
+                msg = "connection not active";
         }
         json.append("status", status);
         json.append("message", msg);

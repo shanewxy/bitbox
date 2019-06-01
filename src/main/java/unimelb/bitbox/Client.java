@@ -8,6 +8,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
+import java.net.InetAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.security.InvalidKeyException;
@@ -74,11 +75,11 @@ public class Client {
             HostPort hostport = new HostPort(server);
             client.initConnection(hostport, identity);
             String request = generateRequest(command, peer);
-            log.info(request);
+            log.info("sending: " + request);
             client.out.write(request);
             client.out.flush();
             String resp = SecurityUtil.decrypt(client.in.readLine(), secretKey);
-            log.info(resp);
+            log.info("original message: " + resp);
         } catch (ParseException e) {
             log.severe(e.getMessage());
         } catch (IOException e) {
@@ -98,10 +99,12 @@ public class Client {
             socket = new Socket(hostport.host, hostport.port);
             in = new BufferedReader(new InputStreamReader(socket.getInputStream(), "UTF-8"));
             out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream(), "UTF-8"));
-            out.write(Protocol.CreateAuthRequest(identity));
+            String request = Protocol.CreateAuthRequest(identity);
+            out.write(request);
             out.flush();
+            log.info("sending: " + request);
             String secretKey = in.readLine();
-            log.info(secretKey);
+            log.info("received: " + secretKey);
             getSecretKey(secretKey);
         } catch (UnknownHostException e) {
             log.severe(e.getMessage());
@@ -142,6 +145,7 @@ public class Client {
 
     /**
      * read the private key from bitboxclient_rsa
+     * 
      * @param privateKeyFileName
      * @return PrivateKey object
      */
@@ -154,7 +158,6 @@ public class Client {
             pemParser = new PEMParser(new FileReader(privateKeyFile));
             Object object = pemParser.readObject();
             JcaPEMKeyConverter converter = new JcaPEMKeyConverter().setProvider("BC");
-            log.info("Unencrypted key - no password needed");
             kp = converter.getKeyPair((PEMKeyPair) object);
         } catch (FileNotFoundException e) {
             log.severe(e.getMessage());
@@ -167,8 +170,9 @@ public class Client {
 
     /**
      * generate json String of the request
+     * 
      * @param command
-     * @param peer peer to connect or disconnect.
+     * @param peer    peer to connect or disconnect.
      * @return json string
      */
     public static String generateRequest(String command, String peer) {
@@ -181,14 +185,26 @@ public class Client {
         case "connect_peer":
             cmd = "CONNECT_PEER_REQUEST";
             HostPort hp = new HostPort(peer);
-            json.append("host", hp.host);
+            try {
+                json.append("host", InetAddress.getByName(hp.host).getHostAddress());
+            } catch (UnknownHostException e) {
+                e.printStackTrace();
+            }
             json.append("port", hp.port);
             break;
         case "disconnect_peer":
             cmd = "DISCONNECT_PEER_REQUEST";
             HostPort h = new HostPort(peer);
-            json.append("host", h.host);
+            try {
+                json.append("host", InetAddress.getByName(h.host).getHostAddress());
+            } catch (UnknownHostException e) {
+                e.printStackTrace();
+            }
             json.append("port", h.port);
+            break;
+        default:
+            log.severe("Invalid command. Should be one of list_peers, connect_peer, disconnect_peer");
+            System.exit(1);
             break;
         }
         json.append("command", cmd);
