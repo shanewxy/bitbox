@@ -81,7 +81,7 @@ public class MessageHandler {
 
         case "FILE_BYTES_RESPONSE":
             responses = handleFileBytesResponse(json);
-            log.info("Received FILE MODIFY REQUEST upon file: "+json.getString("pathName")+": from position => "+json.getLong("position")+" with length: "+json.getLong("length"));
+            log.info("Received FILE BYTES upon file: "+json.getString("pathName")+": from position => "+json.getLong("position")+" with length: "+json.getLong("length"));
             break;
         }
 
