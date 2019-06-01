@@ -81,8 +81,9 @@ public class SecurityUtil {
             try {
                 Cipher cipher = Cipher.getInstance("AES/ECB/NoPadding");
                 cipher.init(Cipher.DECRYPT_MODE, secretKey);
-                log.info(new String(cipher.doFinal(decoded)));
-                decrpted = new String(cipher.doFinal(decoded)).split(System.lineSeparator())[0];
+                String padded = new String(cipher.doFinal(decoded));
+                log.info("decrypted String with padding : " + padded);
+                decrpted = padded.split(System.lineSeparator())[0];
             } catch (InvalidKeyException e) {
                 log.severe(e.getMessage());
             } catch (NoSuchAlgorithmException e) {

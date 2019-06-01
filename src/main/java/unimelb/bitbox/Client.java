@@ -75,11 +75,11 @@ public class Client {
             HostPort hostport = new HostPort(server);
             client.initConnection(hostport, identity);
             String request = generateRequest(command, peer);
-            log.info(request);
+            log.info("sending: " + request);
             client.out.write(request);
             client.out.flush();
             String resp = SecurityUtil.decrypt(client.in.readLine(), secretKey);
-            log.info(resp);
+            log.info("original message: " + resp);
         } catch (ParseException e) {
             log.severe(e.getMessage());
         } catch (IOException e) {
@@ -99,10 +99,12 @@ public class Client {
             socket = new Socket(hostport.host, hostport.port);
             in = new BufferedReader(new InputStreamReader(socket.getInputStream(), "UTF-8"));
             out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream(), "UTF-8"));
-            out.write(Protocol.CreateAuthRequest(identity));
+            String request = Protocol.CreateAuthRequest(identity);
+            out.write(request);
             out.flush();
+            log.info("sending: " + request);
             String secretKey = in.readLine();
-            log.info(secretKey);
+            log.info("received: " + secretKey);
             getSecretKey(secretKey);
         } catch (UnknownHostException e) {
             log.severe(e.getMessage());
@@ -156,7 +158,6 @@ public class Client {
             pemParser = new PEMParser(new FileReader(privateKeyFile));
             Object object = pemParser.readObject();
             JcaPEMKeyConverter converter = new JcaPEMKeyConverter().setProvider("BC");
-            log.info("Unencrypted key - no password needed");
             kp = converter.getKeyPair((PEMKeyPair) object);
         } catch (FileNotFoundException e) {
             log.severe(e.getMessage());

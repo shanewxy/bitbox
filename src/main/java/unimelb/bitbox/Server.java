@@ -65,16 +65,16 @@ public class Server {
                 out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream(), "UTF-8"));
                 in = new BufferedReader(new InputStreamReader(socket.getInputStream(), "UTF-8"));
                 String authrequest = in.readLine();
-                log.info(authrequest);
+                log.info("received: " + authrequest);
                 Document auth = Document.parse(authrequest);
                 String identity = auth.getString("identity");
                 out.write(generateAuthResponse(identity));
                 out.flush();
                 String command = in.readLine();
-                log.info(command);
+                log.info("received: " + command);
                 if (command != null) {
                     String json = SecurityUtil.decrypt(command, secretKey);
-                    log.info(json);
+                    log.info("original message: " + json);
                     String resp = handleCmd(json);
                     String payload = SecurityUtil.encrypt(resp, secretKey);
                     out.write(payload);
@@ -106,7 +106,6 @@ public class Server {
                 message = "public key found";
                 status = true;
                 try {
-                    log.info(pub[1]);
                     KeySpec spec = new SSHEncodedToRSAPublicConverter(key).convertToRSAPublicKey();
                     KeyFactory kf = KeyFactory.getInstance("RSA");
                     PublicKey pkey = kf.generatePublic(spec);
