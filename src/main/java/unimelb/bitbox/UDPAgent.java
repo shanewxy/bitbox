@@ -39,9 +39,20 @@ public class UDPAgent {
     private static Logger log = Logger.getLogger(UDPAgent.class.getName());
 
     private static HostPort localHostPort = new HostPort(Configuration.getConfigurationValue("advertisedName"), Integer.parseInt(Configuration.getConfigurationValue("udpPort")));
+    /**
+     * This HashMap aims to store all known/connected peers, with an alternative port value (default=-1),
+     * indicating the advertised port when it is different from the real port
+     */
     public static HashMap<String, Integer> rememberedPeers = new HashMap<String, Integer>();
+    /**
+     * An ArrayList storing all connected peers' HostPort
+     */
     public static ArrayList<HostPort> candidates = new ArrayList<HostPort>();
-//    private Map<HostPort, List<String>> responseStatus = new HashMap();
+    /**
+     * A ConcurrentHashMap storing every sent request and its "feature", which is a unique characteristic
+     * for each sent request, in order to track whether their corresponding response is arrived successfully
+     * later.
+     */
     private Map<String, ArrayList<String>> timeoutCollections = new ConcurrentHashMap<String, ArrayList<String>>();
     private DatagramSocket socket;
     private MessageHandler handler;
@@ -74,10 +85,18 @@ public class UDPAgent {
         new Thread(() -> receiveMsg()).start();
         log.info("Start receiving messages thread...");
 
+        
         makeConnections(peers);
 
     }
 
+    /**
+     * Try to connect one of the peers in the provided peer list, can also be used to connect
+     * with specified peer by the command from client
+     * @param peers The provided peer list
+     * @return True if successfully connect with one of the peer in the peer list
+     * @throws UnsupportedEncodingException
+     */
     public boolean makeConnections(String[] peers) throws UnsupportedEncodingException {
         boolean status = false;
         log.info("Start connecting with provided peers...");
@@ -90,6 +109,7 @@ public class UDPAgent {
             	HostPort targetHostPort = new HostPort(InetAddress.getByName(hpStr[0]).getHostAddress(), Integer.parseInt(hpStr[1]));
 				payload.setAddress(InetAddress.getByName(targetHostPort.host));
 				payload.setPort(targetHostPort.port);
+				// Try to connect with a peer will automatically add it into the remembered list
 				HostPort newHostPort = new HostPort(targetHostPort.host, targetHostPort.port);
 				rememberedPeers.put(newHostPort.toString(), -1);
                 status = reliableSend(hsRequest, payload, targetHostPort.toString());
@@ -113,6 +133,9 @@ public class UDPAgent {
         return status;
     }
 
+    /**
+     * Main method for handling every incoming UDP DatagramPacket on specified port
+     */
     private void receiveMsg() {
 
         while (true) {
@@ -124,19 +147,13 @@ public class UDPAgent {
                 String json = new String(payload.getData(), 0, payload.getLength(), "UTF-8");
                 Document messageDoc = (Document) Document.parse(json);
                 String command = messageDoc.getString("command");
-//                if (command.endsWith("_RESPONSE")) {
-//                    for (HostPort hp : responseStatus.keySet()) {
-//                        if (hp.equals(incomingHP)) {
-//                            List<String> list = responseStatus.get(hp);
-//                            String replace = command.replace("_RESPONSE", "");
-//                            list.remove(replace);
-//                        }
-//                    }
-//                }
 
+                // First check whether the incoming packet comes from a known/connected peer
                 if (rememberedPeers.get(incomingHP.toString()) != null) {
                     new ProcessMessages(payload).start();
+                // If not, check whether it is a handshake request, if it is still not a hs request, ignore it
                 } else {
+                	// Check the connection capacity
                     if (command.equals("HANDSHAKE_REQUEST")) {
                         if (clientCount < MAXCONNECTIONS) {
                             if (handleHandshake(new HostPort((Document) messageDoc.get("hostPort")), incomingHP)) {
@@ -164,6 +181,13 @@ public class UDPAgent {
 
     }
 
+    /**
+     * When received a handshake request, process it
+     * @param advertisedHostPort The HostPort that the remote peer advertises
+     * @param realHostPort The real HostPort of the remote peer by the help of InetAddress
+     * @return True if the handshake process is successful
+     * @throws UnsupportedEncodingException
+     */
     private boolean handleHandshake(HostPort advertisedHostPort, HostPort realHostPort) throws UnsupportedEncodingException {
 
         log.info("received HANDSHAKE_REQUEST from " + advertisedHostPort.toString() + "(" + realHostPort.toString() + ")");
@@ -210,6 +234,11 @@ public class UDPAgent {
         }
     }
 
+    /**
+     * When some file events are produced, local peer will use this method to broadcast proper messages
+     * to all connected peers
+     * @param msg The message that required to broadcast
+     */
     public void sendToPeers(String msg) {
 
         if (rememberedPeers.isEmpty()) {
@@ -247,6 +276,9 @@ public class UDPAgent {
         }
     }
 
+    /**
+     * The singleton design
+     */
     public static synchronized UDPAgent getInstance(int udpPort, MessageHandler handler, String[] peers) {
         if (instance == null)
             try {
@@ -257,6 +289,13 @@ public class UDPAgent {
         return instance;
     }
     
+    /**
+     * Extract a unique feature from a request or response. The feature will be the same
+     * when the request and the response are corresponding. Meaning that the response is
+     * belongs to that request
+     * @param request
+     * @return
+     */
     private String ExtractFeature(Document request) {
     	String command = request.getString("command");
     	String feature = "";
@@ -271,6 +310,16 @@ public class UDPAgent {
     	return feature;
     }
     
+    /**
+     * A reliable send method that realize the re-sending functionality of requests, the request will be re-send after
+     * one interval of UDPTIMEOUT when the corresponding response still doesn't arrive. After the attempt time exceed the
+     * UDPATTEMPTS, the sending process of this request will be regarded as failure.
+     * @param doc Request document object
+     * @param payload The required DatagramPacket 
+     * @param targetHPStr Target HostPort in the form of string
+     * @return
+     * @throws UnsupportedEncodingException
+     */
     private boolean reliableSend(Document doc, DatagramPacket payload, String targetHPStr) throws UnsupportedEncodingException {
     	boolean status = true;
 		log.info("I am sending a request <<"+doc.toJson()+">> to peer: "+targetHPStr);
@@ -308,6 +357,7 @@ public class UDPAgent {
             } catch (InterruptedException e) {
 				e.printStackTrace();
 			}
+            // Check whether the feature HashMap still contain such feature, meaning the response hasn't arrive
             if(!timeoutCollections.get(targetHPStr).contains(feature)) {
             	status = true;
             	break;
@@ -322,6 +372,12 @@ public class UDPAgent {
         return status;
     }
 
+    /**
+     * An inner class acting like the thread for processing one message with the help of file management system
+     * @author Kedi Peng
+     * @author Yichen Liu
+     *
+     */
     private class ProcessMessages extends Thread {
 
         private String msg;
@@ -337,7 +393,6 @@ public class UDPAgent {
             targetHPStr = targetHP.toString();
             try {
                 msg = new String(payload.getData(), 0, payload.getLength(), "UTF-8");
-                log.info("Start processing: " + msg);
             } catch (UnsupportedEncodingException e) {
                 // Nearly impossible
                 e.printStackTrace();
@@ -348,7 +403,7 @@ public class UDPAgent {
 
         @Override
         public void run() {
-
+        	// Tolerating the multiple appearances of one handshake request (re-sending)
             if (Document.parse(msg).get("command").equals("HANDSHAKE_REQUEST")) {
                 byte[] handShakeResp;
                 try {
@@ -363,6 +418,9 @@ public class UDPAgent {
                     ioe.printStackTrace();
                 }
             }
+            // Whenever receives a response, check the feature HashMap that whether the same feature has already stored,
+            // which means this response is corresponding with a previous sent request. If so, delete that feature record,
+            // which will also trigger the reliableSend method to judge that request is successfully sent or not
             if (msg != null) {
             	Document doc = Document.parse(msg);
             	if (doc.getString("command").contains("RESPONSE")) {
@@ -375,6 +433,7 @@ public class UDPAgent {
             			log.info("Nothing here");
             		}
             	}
+            	// Using MessageHandler to handle messages
                 List<Document> responses = handler.handleMsg(msg);
                 try {
                     if (responses != null) {

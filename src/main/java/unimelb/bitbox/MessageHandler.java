@@ -45,7 +45,6 @@ public class MessageHandler {
      *         command
      */
     public List<Document> handleMsg(String msg) {
-        log.info("Handler Received: " + msg); // print received message to Log
         Document json = (Document) Document.parse(msg);
         String command = json.getString("command");
         List<Document> responses = new ArrayList<Document>();
@@ -55,27 +54,34 @@ public class MessageHandler {
         switch (command) {
         case "FILE_DELETE_REQUEST":
             responses.add(handleFileDeleteRequest(json));
+            log.info("Rceived FILE DELETE REQUEST: "+json.toJson());
             break;
         case "FILE_MODIFY_REQUEST":
             responses = handleFileModifyRequest(json);
+            log.info("Rceived FILE MODIFY REQUEST: "+json.toJson());
             break;
         case "DIRECTORY_CREATE_REQUEST":
             responses = handleDirCreateRequest(json);
+            log.info("Rceived DIRECTORY CREATE REQUEST: "+json.toJson());
             break;
         case "DIRECTORY_DELETE_REQUEST":
             responses = handleDirDeleteRequest(json);
+            log.info("Rceived DIRECTORY DELETE REQUEST: "+json.toJson());
             break;
 
         case "FILE_CREATE_REQUEST":
             responses = handleFileCreateRequest(json);
+            log.info("Rceived FILE MODIFY REQUEST: "+json.toJson());
             break;
 
         case "FILE_BYTES_REQUEST":
             responses = handleFileBytesRequest(json);
+            log.info("Rceived FILE BYTES REQUEST: "+json.toJson());
             break;
 
         case "FILE_BYTES_RESPONSE":
             responses = handleFileBytesResponse(json);
+            log.info("Rceived FILE MODIFY REQUEST upon file: "+json.getString("pathName")+": from position => "+json.getLong("pisition")+" with length: "+json.getLong("length"));
             break;
         }
 
@@ -342,10 +348,8 @@ public class MessageHandler {
                 buffer.flip();
                 byte[] bytes = new byte[buffer.limit()];
                 buffer.get(bytes);
-                log.warning("Sent byte array's length: "+bytes.length);
 
                 json.append("content", encoder.encodeToString(bytes));
-                log.warning("Encoded length: "+encoder.encodeToString(bytes).length());
                 message = "successful read";
                 result = true;
 
