@@ -90,9 +90,11 @@ public class UDPAgent {
             	HostPort targetHostPort = new HostPort(InetAddress.getByName(hpStr[0]).getHostAddress(), Integer.parseInt(hpStr[1]));
 				payload.setAddress(InetAddress.getByName(targetHostPort.host));
 				payload.setPort(targetHostPort.port);
+				HostPort newHostPort = new HostPort(targetHostPort.host, targetHostPort.port);
+				rememberedPeers.put(newHostPort.toString(), -1);
                 status = reliableSend(hsRequest, payload, targetHostPort.toString());
                 if(status) {
-                	HostPort newHostPort = new HostPort(targetHostPort.host, targetHostPort.port);
+                	
                     rememberedPeers.put(newHostPort.toString(), -1);
                     candidates.add(newHostPort);
                     new Thread(() -> broadcastSyncEvents()).start();
@@ -254,41 +256,6 @@ public class UDPAgent {
             }
         return instance;
     }
-
-//    public boolean sendToPeer(String msg, HostPort hp) {
-//        boolean status = false;
-//        int attempts = 1;
-//        try {
-//            InetAddress address = InetAddress.getByName(hp.host);
-//            byte[] bytesMsg = msg.getBytes("UTF-8");
-//            DatagramPacket packet = new DatagramPacket(bytesMsg, bytesMsg.length, address, hp.port);
-//            @SuppressWarnings("unchecked")
-//			List<String> requests = responseStatus.getOrDefault(hp, new ArrayList());
-//            String rawMsg = Document.parse(msg).getString("command").replace("_REQUEST", "");
-//            requests.add(rawMsg);
-//            hp = new HostPort(address.getHostAddress(), hp.port);
-//            responseStatus.put(hp, requests);
-//            while (responseStatus.get(hp).contains(rawMsg) && attempts <= UDPATTEMPTS) {
-//                log.info(msg + "trying no." + attempts++);
-//                socket.send(packet);
-//                Thread.sleep(UDPTIMEOUT);
-//            }
-//            if (attempts > UDPATTEMPTS)
-//                log.warning("peer failed");
-//            else {
-//                log.info(msg + " sent successfully");
-//                status = true;
-//            }
-//        } catch (UnknownHostException e) {
-//            e.printStackTrace();
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        } catch (InterruptedException e) {
-//            e.printStackTrace();
-//        }
-//        return status;
-//
-//    }
     
     private String ExtractFeature(Document request) {
     	String command = request.getString("command");

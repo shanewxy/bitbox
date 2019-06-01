@@ -237,10 +237,10 @@ public class Server {
         } else if ("udp".equals(ServerMain.MODE)) {
             try {
                 UDPAgent agent = UDPAgent.getInstance(ServerMain.UDPPORT, handler, ServerMain.PEERS);
-                if (agent.rememberedPeers.containsKey(hp.toString())) {
+                if (agent.candidates.contains(hp)) {
                     status = false;
                     msg = "connection has already established";
-                } else {
+                } else  {
 
                     status = agent.makeConnections(new String[] { hp.toString() });
                     if (status)
