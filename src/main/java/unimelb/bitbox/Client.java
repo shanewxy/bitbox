@@ -201,6 +201,10 @@ public class Client {
             }
             json.append("port", h.port);
             break;
+        default:
+            log.severe("Invalid command. Should be one of list_peers, connect_peer, disconnect_peer");
+            System.exit(1);
+            break;
         }
         json.append("command", cmd);
         return SecurityUtil.encrypt(json.toJson(), secretKey) + System.lineSeparator();
