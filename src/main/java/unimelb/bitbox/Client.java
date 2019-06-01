@@ -104,8 +104,7 @@ public class Client {
             log.info("sending: " + request);
             String secretKey = in.readLine();
             log.info("received: " + secretKey);
-            if (secretKey != null)
-                getSecretKey(secretKey);
+            getSecretKey(secretKey);
         } catch (UnknownHostException e) {
             log.severe(e.getMessage());
         } catch (IOException e) {
@@ -122,6 +121,8 @@ public class Client {
     private void getSecretKey(String json) {
         Document msg = Document.parse(json);
         String encoded = msg.getString("AES128");
+        if (encoded == null)
+            System.exit(1);
         Decoder decoder = Base64.getDecoder();
         byte[] encrypted = decoder.decode(encoded);
         PrivateKey privateKey = readPrivateKey(RSA_FILE);

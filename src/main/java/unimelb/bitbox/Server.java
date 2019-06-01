@@ -68,11 +68,13 @@ public class Server {
                 log.info("received: " + authrequest);
                 Document auth = Document.parse(authrequest);
                 String identity = auth.getString("identity");
-                out.write(generateAuthResponse(identity));
+                String authResponse = generateAuthResponse(identity);
+                out.write(authResponse);
                 out.flush();
+                log.info("sending:" + authResponse);
                 String command = in.readLine();
-                log.info("received: " + command);
                 if (command != null) {
+                    log.info("received: " + command);
                     String json = SecurityUtil.decrypt(command, secretKey);
                     log.info("original message: " + json);
                     String resp = handleCmd(json);
@@ -240,7 +242,7 @@ public class Server {
                 if (agent.candidates.contains(hp)) {
                     status = false;
                     msg = "connection has already established";
-                } else  {
+                } else {
 
                     status = agent.makeConnections(new String[] { hp.toString() });
                     if (status)
