@@ -90,9 +90,11 @@ public class UDPAgent {
             	HostPort targetHostPort = new HostPort(InetAddress.getByName(hpStr[0]).getHostAddress(), Integer.parseInt(hpStr[1]));
 				payload.setAddress(InetAddress.getByName(targetHostPort.host));
 				payload.setPort(targetHostPort.port);
+				HostPort newHostPort = new HostPort(targetHostPort.host, targetHostPort.port);
+				rememberedPeers.put(newHostPort.toString(), -1);
                 status = reliableSend(hsRequest, payload, targetHostPort.toString());
                 if(status) {
-                	HostPort newHostPort = new HostPort(targetHostPort.host, targetHostPort.port);
+                	
                     rememberedPeers.put(newHostPort.toString(), -1);
                     candidates.add(newHostPort);
                     new Thread(() -> broadcastSyncEvents()).start();
