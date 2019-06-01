@@ -35,7 +35,6 @@ import org.apache.commons.cli.ParseException;
 import org.bouncycastle.openssl.PEMKeyPair;
 import org.bouncycastle.openssl.PEMParser;
 import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter;
-import org.bouncycastle.util.Arrays;
 
 import unimelb.bitbox.util.Document;
 import unimelb.bitbox.util.HostPort;

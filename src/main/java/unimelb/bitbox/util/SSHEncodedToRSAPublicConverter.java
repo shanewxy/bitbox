@@ -1,25 +1,22 @@
 package unimelb.bitbox.util;
 
-import java.io.ByteArrayInputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.math.BigInteger;
-import java.security.spec.RSAPublicKeySpec;
-import java.util.Base64;
-
-import org.apache.commons.io.IOUtils;
-
-import com.google.common.base.Splitter;
-import com.google.common.io.ByteSource;
-import com.google.common.io.ByteStreams;
-import com.google.common.base.Charsets;
-
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.Iterables.get;
 import static com.google.common.collect.Iterables.size;
 import static com.google.common.io.BaseEncoding.base64;
+
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.math.BigInteger;
+import java.security.spec.RSAPublicKeySpec;
+
+import org.apache.commons.io.IOUtils;
+
+import com.google.common.base.Charsets;
+import com.google.common.base.Splitter;
+import com.google.common.io.ByteSource;
+import com.google.common.io.ByteStreams;
 
 /**
  * Source:

@@ -26,7 +26,7 @@ public class MessageHandler {
         FILE_MODIFY_RESPONSE, DIRECTORY_CREATE_REQUEST, DIRECTORY_CREATE_RESPONSE, DIRECTORY_DELETE_REQUEST, DIRECTORY_DELETE_RESPONSE, FILE_BYTES_REQUEST, FILE_BYTES_RESPONSE
     }
 
-    private static final Long BLOCKSIZE = Math.min(Long.parseLong(Configuration.getConfigurationValue("blockSize")),8192);
+    private static final Long BLOCKSIZE = Math.min(Long.parseLong(Configuration.getConfigurationValue("blockSize")), 8192);
     private static Logger log = Logger.getLogger(MessageHandler.class.getName());
 
     public FileSystemManager fileSystemManager;
@@ -49,39 +49,37 @@ public class MessageHandler {
         String command = json.getString("command");
         List<Document> responses = new ArrayList<Document>();
 
-        boolean result = false;
-
         switch (command) {
         case "FILE_DELETE_REQUEST":
             responses.add(handleFileDeleteRequest(json));
-            log.info("Received FILE DELETE REQUEST: "+json.toJson());
+            log.info(json.toJson());
             break;
         case "FILE_MODIFY_REQUEST":
             responses = handleFileModifyRequest(json);
-            log.info("Received FILE MODIFY REQUEST: "+json.toJson());
+            log.info(json.toJson());
             break;
         case "DIRECTORY_CREATE_REQUEST":
             responses = handleDirCreateRequest(json);
-            log.info("Received DIRECTORY CREATE REQUEST: "+json.toJson());
+            log.info(json.toJson());
             break;
         case "DIRECTORY_DELETE_REQUEST":
             responses = handleDirDeleteRequest(json);
-            log.info("Received DIRECTORY DELETE REQUEST: "+json.toJson());
+            log.info(json.toJson());
             break;
 
         case "FILE_CREATE_REQUEST":
             responses = handleFileCreateRequest(json);
-            log.info("Received FILE MODIFY REQUEST: "+json.toJson());
+            log.info(json.toJson());
             break;
 
         case "FILE_BYTES_REQUEST":
             responses = handleFileBytesRequest(json);
-            log.info("Received FILE BYTES REQUEST: "+json.toJson());
+            log.info(json.toJson());
             break;
 
         case "FILE_BYTES_RESPONSE":
             responses = handleFileBytesResponse(json);
-            log.info("Received FILE MODIFY REQUEST upon file: "+json.getString("pathName")+": from position => "+json.getLong("position")+" with length: "+json.getLong("length"));
+            log.info("Received FILE MODIFY REQUEST upon file: " + json.getString("pathName") + ": from position => " + json.getLong("position") + " with length: " + json.getLong("length"));
             break;
         }
 
@@ -179,9 +177,10 @@ public class MessageHandler {
     }
 
     /**
-     * this method is used to handle directory create request. When peer receives the
-     * "DIRECTORY_CREATE_REQUEST", system will check the pathname and  create this directory
-     * when everything works well. It will return a JSON for Directory create response.
+     * this method is used to handle directory create request. When peer receives
+     * the "DIRECTORY_CREATE_REQUEST", system will check the pathname and create
+     * this directory when everything works well. It will return a JSON for
+     * Directory create response.
      * 
      * @param JSON
      * @return an ArrayList of Document objects
@@ -218,9 +217,10 @@ public class MessageHandler {
     }
 
     /**
-     * this method is used to handle directory delete request. When peer receives the
-     * "DIRECTORY_DELETE_REQUEST", system will check the pathname and delete this directory
-     * when everything works well. It will return a JSON for Directory delete response.
+     * this method is used to handle directory delete request. When peer receives
+     * the "DIRECTORY_DELETE_REQUEST", system will check the pathname and delete
+     * this directory when everything works well. It will return a JSON for
+     * Directory delete response.
      * 
      * @param JSON
      * @return an ArrayList of Document objects
@@ -380,9 +380,9 @@ public class MessageHandler {
         ArrayList<Document> responses = new ArrayList<Document>();
         boolean status = json.getBoolean("status");
         if (!status) {
-			return responses;
-		}
-        
+            return responses;
+        }
+
         String content = json.getString("content");
         long position = json.getLong("position");
         String pathName = json.getString("pathName");
