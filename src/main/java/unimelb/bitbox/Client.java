@@ -104,7 +104,8 @@ public class Client {
             log.info("sending: " + request);
             String secretKey = in.readLine();
             log.info("received: " + secretKey);
-            getSecretKey(secretKey);
+            if (secretKey != null)
+                getSecretKey(secretKey);
         } catch (UnknownHostException e) {
             log.severe(e.getMessage());
         } catch (IOException e) {
