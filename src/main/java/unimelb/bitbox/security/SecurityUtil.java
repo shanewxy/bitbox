@@ -1,4 +1,4 @@
-package unimelb.bitbox.util;
+package unimelb.bitbox.security;
 
 import java.io.UnsupportedEncodingException;
 import java.security.InvalidKeyException;
@@ -15,6 +15,8 @@ import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
 
 import org.bouncycastle.util.Arrays;
+
+import unimelb.bitbox.util.Document;
 
 /**
  * This class contains AES encryption encr and decryption methods

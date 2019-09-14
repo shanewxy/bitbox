@@ -1,4 +1,4 @@
-package unimelb.bitbox;
+package unimelb.bitbox.security;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -30,6 +30,9 @@ import javax.crypto.KeyGenerator;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
 
+import unimelb.bitbox.MessageHandler;
+import unimelb.bitbox.ServerMain;
+import unimelb.bitbox.UDPAgent;
 import unimelb.bitbox.tcp.Connection;
 import unimelb.bitbox.tcp.TCPClient;
 import unimelb.bitbox.tcp.TCPServer;
@@ -37,8 +40,6 @@ import unimelb.bitbox.util.Configuration;
 import unimelb.bitbox.util.Document;
 import unimelb.bitbox.util.HostPort;
 import unimelb.bitbox.util.Protocol;
-import unimelb.bitbox.util.SSHEncodedToRSAPublicConverter;
-import unimelb.bitbox.util.SecurityUtil;
 
 /**
  * This class handles request from other Clients

@@ -19,6 +19,8 @@ import unimelb.bitbox.util.FileSystemManager.FileSystemEvent;
  * result to the event sender.
  *
  * @author pengkedi
+ * @author Xueying Wang
+ *
  */
 public class MessageHandler {
     private enum Command {

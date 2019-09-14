@@ -1,4 +1,4 @@
-package unimelb.bitbox.util;
+package unimelb.bitbox.security;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.Iterables.get;

@@ -1,4 +1,4 @@
-package unimelb.bitbox;
+package unimelb.bitbox.security;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -39,9 +39,10 @@ import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter;
 import unimelb.bitbox.util.Document;
 import unimelb.bitbox.util.HostPort;
 import unimelb.bitbox.util.Protocol;
-import unimelb.bitbox.util.SecurityUtil;
 
 /**
+ * This class send instructions to Server.
+ * 
  * @author: Xueying Wang
  */
 public class Client {

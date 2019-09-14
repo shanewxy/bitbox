@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
 
+import unimelb.bitbox.security.Server;
 import unimelb.bitbox.tcp.TCPClient;
 import unimelb.bitbox.tcp.TCPServer;
 import unimelb.bitbox.util.Configuration;
@@ -14,6 +15,12 @@ import unimelb.bitbox.util.FileSystemManager;
 import unimelb.bitbox.util.FileSystemObserver;
 import unimelb.bitbox.util.FileSystemManager.FileSystemEvent;
 
+/**
+ * This class initializes the peer and observes the change of filesystem.
+ * 
+ * @author Xueying Wang
+ * @author Kedi Peng
+ */
 public class ServerMain implements FileSystemObserver {
     private static Logger log = Logger.getLogger(ServerMain.class.getName());
     private static final int PORT = Integer.parseInt(Configuration.getConfigurationValue("port"));
