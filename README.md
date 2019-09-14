@@ -5,7 +5,7 @@ A distributed file share system. The basic components are the File System Manage
 
 We would like to allow the BitBox Peers to form an unstructured P2P network. By unstructured we mean that the connection pattern has no relevance to the functionality, and is somewhat arbitrary depending on how and when peers come and go.
 
-#Peer Protocol Messages
+# Peer Protocol Messages
 
 INVALID_PROTOCOL
 
