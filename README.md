@@ -36,3 +36,17 @@ DIRECTORY_CREATE_REQUEST, DIRECTORY_CREATE_RESPONSE
 DIRECTORY_DELETE_REQUEST, DIRECTORY_DELETE_RESPONSE
 
 FILE_BYTES_REQUEST, FILE_BYTES_RESPONSE
+
+# Running the bitbox peer
+
+java -cp bitbox.jar unimelb.bitbox.Peer
+
+The peer must read its configuration from a file called configuration.properties in the current working directory which follows Java's simple properties file format:
+
+path = test
+port = 8111
+advertisedName = localhost
+peers = localhost:8112,localhost:8113
+maximumIncommingConnections = 10
+blockSize = 1048576
+syncInterval = 60
