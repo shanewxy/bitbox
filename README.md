@@ -39,6 +39,8 @@ FILE_BYTES_REQUEST, FILE_BYTES_RESPONSE
 
 # Running the bitbox peer
 
+The BitBox Peer will be run according to the following command:
+
 java -cp bitbox.jar unimelb.bitbox.Peer
 
 The peer must read its configuration from a file called configuration.properties in the current working directory which follows Java's simple properties file format:
