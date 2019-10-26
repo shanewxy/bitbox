@@ -18,7 +18,7 @@ File contents are transmitted inside JSON using Base64 encoding.
 Interactions are in the most part be asynchronous request/reply between peers.
 
 # Peer Protocol Messages
-
+```
 INVALID_PROTOCOL
 
 CONNECTION_REFUSED
@@ -36,7 +36,7 @@ DIRECTORY_CREATE_REQUEST, DIRECTORY_CREATE_RESPONSE
 DIRECTORY_DELETE_REQUEST, DIRECTORY_DELETE_RESPONSE
 
 FILE_BYTES_REQUEST, FILE_BYTES_RESPONSE
-
+```
 # Running the bitbox peer
 
 The BitBox Peer will be run according to the following command:
